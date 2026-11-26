@@ -13,6 +13,21 @@ final class PanelSmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Kolkata"].waitForExistence(timeout: 5))
 
         let panel = app.dialogs.firstMatch
+        let homeTime = panel.staticTexts.matching(NSPredicate(format: "value MATCHES %@", "\\d{1,2}:\\d{2}.*")).firstMatch
+        let atNow = homeTime.value as? String
+
+        // Move the Cursor, close and reopen: the panel must reset to Now (onAppear/.task rerun).
+        let handle = panel.otherElements["Cursor handle"]
+        handle.click()
+        XCTAssertTrue(panel.buttons["Back to Now"].waitForExistence(timeout: 5))
+        let moved = homeTime.value as? String
+        XCTAssertNotEqual(moved, atNow)
+        app.statusItems.firstMatch.click() // close
+        XCTAssertTrue(panel.waitForNonExistence(timeout: 5))
+        app.statusItems.firstMatch.click() // reopen
+        XCTAssertTrue(panel.staticTexts["Following Now"].waitForExistence(timeout: 5))
+        XCTAssertNotEqual(homeTime.value as? String, moved) // back at Now (not compared to atNow: the minute may have ticked)
+
         let screenshot = XCTAttachment(image: try XCTUnwrap(screenshot(of: panel)))
         screenshot.name = "panel"
         screenshot.lifetime = .keepAlways

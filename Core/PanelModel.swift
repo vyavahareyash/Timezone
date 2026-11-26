@@ -37,6 +37,26 @@ public struct ZoneRow {
         isFollowingNow = true
     }
 
+    /// Move the Cursor to `date`, snapped to 15 minutes from the Timeline's start and kept within the
+    /// Timeline. Ends Following Now.
+    public func moveCursor(to date: Date) {
+        let timeline = timeline
+        let step = Self.cursorStep
+        let snapped = timeline.start + (date.timeIntervalSince(timeline.start) / step).rounded() * step
+        cursor = min(max(snapped, timeline.start), timeline.end)
+        isFollowingNow = false
+    }
+
+    /// Move the Cursor by whole 15-minute steps (negative goes back).
+    public func nudgeCursor(steps: Int) {
+        moveCursor(to: cursor + Double(steps) * Self.cursorStep)
+    }
+
+    private static let cursorStep: TimeInterval = 15 * 60
+
+    /// Return the Cursor to Now and resume Following Now.
+    public func backToNow() { open() }
+
     /// Time passed: advance Now (rolling the Timeline at Home midnight), and the Cursor with it while
     /// Following Now. Also picks up a system time zone change.
     public func tick() {

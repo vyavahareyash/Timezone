@@ -71,6 +71,53 @@ struct PanelModelTests {
         #expect(model.cursor == utc("2026-09-21T22:00:01Z"))
     }
 
+    @Test func movingTheCursorSnapsToQuarterHoursAndEndsFollowingNow() {
+        let model = PanelModel(clock: { utc("2026-09-21T14:13:20Z") }, systemTimeZone: { berlin })
+        model.open()
+
+        model.moveCursor(to: utc("2026-09-21T15:08:00Z"))
+        #expect(model.cursor == utc("2026-09-21T15:15:00Z"))
+        #expect(!model.isFollowingNow)
+        #expect(model.homeRow.time == utc("2026-09-21T15:15:00Z"))
+    }
+
+    @Test func movingTheCursorStaysWithinTheTimeline() {
+        let model = PanelModel(clock: { utc("2026-09-21T14:13:20Z") }, systemTimeZone: { berlin })
+
+        model.moveCursor(to: utc("2026-09-25T00:00:00Z"))
+        #expect(model.cursor == utc("2026-09-21T22:00:00Z"))
+        model.moveCursor(to: utc("2026-09-01T00:00:00Z"))
+        #expect(model.cursor == utc("2026-09-20T22:00:00Z"))
+    }
+
+    @Test func nudgingMovesByQuarterHoursAndStopsAtTheEdges() {
+        let model = PanelModel(clock: { utc("2026-09-21T14:00:00Z") }, systemTimeZone: { berlin })
+
+        model.nudgeCursor(steps: 1)
+        #expect(model.cursor == utc("2026-09-21T14:15:00Z"))
+        model.nudgeCursor(steps: -2)
+        #expect(model.cursor == utc("2026-09-21T13:45:00Z"))
+        model.nudgeCursor(steps: -1000)
+        #expect(model.cursor == utc("2026-09-20T22:00:00Z"))
+    }
+
+    @Test func ticksDoNotMoveAMovedCursorAndBackToNowResumesFollowing() {
+        var clock = utc("2026-09-21T14:00:00Z")
+        let model = PanelModel(clock: { clock }, systemTimeZone: { berlin })
+        model.moveCursor(to: utc("2026-09-21T09:00:00Z"))
+
+        clock = utc("2026-09-21T14:05:00Z")
+        model.tick()
+        #expect(model.cursor == utc("2026-09-21T09:00:00Z"))
+
+        model.backToNow()
+        #expect(model.cursor == utc("2026-09-21T14:05:00Z"))
+        #expect(model.isFollowingNow)
+        clock = utc("2026-09-21T14:06:00Z")
+        model.tick()
+        #expect(model.cursor == utc("2026-09-21T14:06:00Z"))
+    }
+
     @Test func homeZoneAndTimelineFollowASystemTimeZoneChange() {
         var zone = berlin
         let model = PanelModel(clock: { utc("2026-09-21T14:13:20Z") }, systemTimeZone: { zone })

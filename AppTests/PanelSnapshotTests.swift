@@ -27,12 +27,17 @@ struct PanelSnapshotTests {
         try assertSnapshot("home-25h", zone: "Europe/Berlin", locale: "en_GB", at: fallBackDay)
     }
 
+    @Test func movedCursorShowsBackToNow() throws {
+        try assertSnapshot("home-moved", zone: "Europe/Berlin", locale: "en_GB", movedCursorTo: Self.now + 3 * 3600)
+    }
+
     private func assertSnapshot(
         _ name: String, zone: String, locale: String, colorScheme: ColorScheme = .light, at instant: Date = now,
-        filePath: String = #filePath
+        movedCursorTo cursor: Date? = nil, filePath: String = #filePath
     ) throws {
         let model = PanelModel(clock: { instant }, systemTimeZone: { TimeZone(identifier: zone)! })
-        let view = PanelView(model: model)
+        if let cursor { model.moveCursor(to: cursor) }
+        let view = PanelView(model: model, opensAtNow: cursor == nil)
             .background(.background)
             .environment(\.locale, Locale(identifier: locale))
             .environment(\.colorScheme, colorScheme)
