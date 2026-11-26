@@ -8,6 +8,7 @@ settings:
     SWIFT_VERSION: "6.0"
     CODE_SIGN_IDENTITY: "-"
     GENERATE_INFOPLIST_FILE: YES
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
 targets:
   TimezoneCore:
     type: framework
