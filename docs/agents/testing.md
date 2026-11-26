@@ -15,6 +15,7 @@ Render `PanelView` with a fixed clock, time zone, locale and color scheme to `Ap
 - `ImageRenderer` can't draw AppKit-backed controls: the ⋯ menu renders as a yellow 🚫 placeholder. Expected.
 - `ImageRenderer` does run `onAppear`, which calls `model.open()` and resets the Cursor to Now. Snapshot a moved Cursor with `PanelView(model:opensAtNow: false)`.
 - To see a test's output, `print("DEBUG: ...")`; `scripts/dev` keeps those lines. `VERBOSE=1` dumps multi-KB compiler command lines.
+- A red `scripts/dev test` rewrites snapshots in place, so `git stash` or a branch switch around it leaves modified PNGs that block `git stash pop`. To compare against a clean tree, use a `git worktree`.
 - The target is hosted in `Timezone.app` (it uses `@testable import Timezone`).
 
 ## `UITests/`: real-app smoke test

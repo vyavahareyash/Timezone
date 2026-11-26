@@ -1,8 +1,9 @@
 #!/bin/bash
-# Usage: scripts/dev [test|test-all|run]
+# Usage: scripts/dev [test|test-all|run|cities]
 #   test      core + snapshot tests (default; what pre-push runs)
 #   test-all  adds the UI smoke test (takes over the mouse ~10 s), exports screenshots to build/screenshots/
 #   run       builds and opens the app
+#   cities    regenerates Core/cities.tsv from GeoNames cities15000 (CC BY 4.0, ADR-0003); needs network
 # Output keeps results, real errors and test prints starting "DEBUG: "; VERBOSE=1 shows the full xcodebuild log.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -11,6 +12,16 @@ DD="$HOME/Library/Developer/Xcode/DerivedData/Timezone-cli"
 F='^DEBUG: |[0-9]: error:|^error:|✘|↳ (Recorded|Snapshot|Expectation)|✔ Test run|\*\* (TEST|BUILD)'
 filter() { if [ -n "${VERBOSE:-}" ]; then cat; else grep -E "$F" || true; fi; }
 xcb() { xcodebuild "$@" -scheme Timezone -destination 'platform=macOS' -derivedDataPath "$DD" 2>&1 | filter; }
+
+if [ "${1:-}" = cities ]; then
+  # "city<TAB>country code<TAB>IANA time zone", most populous first (GeoNames columns 15, 2, 9, 18 = population, name, country, tz).
+  tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+  curl -sSL https://download.geonames.org/export/dump/cities15000.zip -o "$tmp/c.zip"
+  unzip -oq "$tmp/c.zip" -d "$tmp"
+  awk -F'\t' '{print $15 "\t" $2 "\t" $9 "\t" $18}' "$tmp/cities15000.txt" | sort -t$'\t' -k1,1nr -s | cut -f2- > Core/cities.tsv
+  wc -l Core/cities.tsv
+  exit
+fi
 
 xcodegen --quiet
 case "${1:-test}" in
@@ -27,5 +38,5 @@ case "${1:-test}" in
     xcb build
     open "$DD/Build/Products/Debug/Timezone.app" ;;
   *)
-    sed -n '2,6p' "$0"; exit 64 ;;
+    sed -n '2,7p' "$0"; exit 64 ;;
 esac
