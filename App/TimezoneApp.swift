@@ -35,8 +35,9 @@ struct PanelView: View {
                 HStack {
                     Text(row.label)
                     Spacer()
-                    // The default locale (autoupdatingCurrent) follows the macOS 12/24-hour setting.
-                    Text(row.time, format: Date.FormatStyle(date: .omitted, time: .shortened, timeZone: row.timeZone))
+                    // Text formats with the environment's time zone and locale (12/24-hour), not the style's own.
+                    Text(row.time, format: Date.FormatStyle(date: .omitted, time: .shortened))
+                        .environment(\.timeZone, row.timeZone)
                         .font(.title2.monospacedDigit())
                 }
             }

@@ -28,10 +28,24 @@ targets:
     sources: [CoreTests]
     dependencies:
       - target: TimezoneCore
+  TimezoneTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: AppTests
+        excludes: ["__Snapshots__/**"]
+    dependencies:
+      - target: Timezone
+  TimezoneUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources: [UITests]
+    dependencies:
+      - target: Timezone
 schemes:
   Timezone:
     build:
       targets:
         Timezone: all
     test:
-      targets: [TimezoneCoreTests]
+      targets: [TimezoneCoreTests, TimezoneTests, TimezoneUITests]

@@ -23,11 +23,11 @@ Walking skeleton: the panel shows the Home zone. See the [v1 spec (#1)](https://
 
 ```sh
 xcodegen
-xcodebuild build -scheme Timezone -destination 'platform=macOS' -derivedDataPath build
-open build/Build/Products/Debug/Timezone.app
+xcodebuild build -scheme Timezone -destination 'platform=macOS' -derivedDataPath ~/Library/Developer/Xcode/DerivedData/Timezone-cli
+open ~/Library/Developer/Xcode/DerivedData/Timezone-cli/Build/Products/Debug/Timezone.app
 ```
 
-Run the tests with `xcodebuild test -scheme Timezone -destination 'platform=macOS' -derivedDataPath build`.
+For tests, panel snapshots and UI screenshots, see [AGENTS.md](AGENTS.md#build-and-test).
 
 ## Credits
 
