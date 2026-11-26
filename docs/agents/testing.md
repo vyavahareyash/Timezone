@@ -13,6 +13,8 @@ Render `PanelView` with a fixed clock, time zone, locale and color scheme to `Ap
 - A new or changed image is written in place and the test fails. Show the human the image diff: committing accepts it, `git checkout` rejects it. The pre-push hook blocks pushes while a snapshot is red.
 - Every change to what the panel shows needs a snapshot of the new state (`CODING_STANDARDS.md`).
 - `ImageRenderer` can't draw AppKit-backed controls: the ⋯ menu renders as a yellow 🚫 placeholder. Expected.
+- `ImageRenderer` does run `onAppear`, which calls `model.open()` and resets the Cursor to Now. Snapshot a moved Cursor with `PanelView(model:opensAtNow: false)`.
+- To see a test's output, `print("DEBUG: ...")`; `scripts/dev` keeps those lines. `VERBOSE=1` dumps multi-KB compiler command lines.
 - The target is hosted in `Timezone.app` (it uses `@testable import Timezone`).
 
 ## `UITests/`: real-app smoke test
@@ -21,6 +23,8 @@ One XCUITest launches the built app with `TZ` pinned, clicks the status item, at
 
 - The panel appears as a `Dialog` in the accessibility tree, not a window.
 - `XCUIElement.screenshot()` fails for a panel on a non-main display, so the test crops it from its whole screen.
+- Static texts expose `value`, not `label`. Don't compare the time against Now (the minute can tick between reads); compare it with the moved time.
+- `click()` on a focusable element in the panel works. `press(forDuration:thenDragTo:)` does not move the Cursor, and `typeKey` or a click at an offset from the element closes the panel.
 - `scripts/dev test-all` exports screenshots to `build/screenshots/` (the panel is `panel_*.png`; `manifest.json` maps names).
 
 ## Build location

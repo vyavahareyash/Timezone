@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues for vyavahareyash/Timezone (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for vyavahareyash/Timezone (via the `gh` CLI). Read `docs/agents/issue-tracker.md` before any `gh` call: plain `gh issue view` prints nothing, use `--json`.
 
 ### Triage labels
 
