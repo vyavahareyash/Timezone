@@ -6,7 +6,7 @@ Click the menu bar icon and a panel opens: today's 24-hour Timeline for your Hom
 
 ## Status
 
-Planning done, implementation not started. See the [v1 spec (#1)](https://github.com/vyavahareyash/Timezone/issues/1) and its sub-issues for the build plan.
+Walking skeleton: the panel shows the Home zone. See the [v1 spec (#1)](https://github.com/vyavahareyash/Timezone/issues/1) and its sub-issues for the build plan.
 
 ## Docs
 
@@ -19,7 +19,15 @@ Planning done, implementation not started. See the [v1 spec (#1)](https://github
 - The current macOS release and Xcode
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
 
-Build instructions will be added with the first implementation ticket.
+## Build
+
+```sh
+xcodegen
+xcodebuild build -scheme Timezone -destination 'platform=macOS' -derivedDataPath build
+open build/Build/Products/Debug/Timezone.app
+```
+
+Run the tests with `xcodebuild test -scheme Timezone -destination 'platform=macOS' -derivedDataPath build`.
 
 ## Credits
 
