@@ -16,8 +16,6 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 One-time: `brew install xcodegen` and `git config core.hooksPath .githooks` (pre-push runs the fast tests). The `.xcodeproj` is generated and git-ignored; run `xcodegen` after changing `project.yml` or adding/removing files.
 
-Build products go to a fixed DerivedData path outside `~/Documents`: test apps there are ad-hoc signed, so macOS would re-ask for Documents access on every build.
-
 ```sh
 DD=~/Library/Developer/Xcode/DerivedData/Timezone-cli
 xcodegen
@@ -31,9 +29,6 @@ xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path 
 
 Add `-only-testing:TimezoneCoreTests -only-testing:TimezoneTests` for a fast loop that skips the UI test (it takes over the mouse for ~10 s).
 
-Layout:
-- `Core/`: the pure `TimezoneCore` framework (Foundation only, no SwiftUI/AppKit).
-- `App/`: the SwiftUI menu bar app.
-- `CoreTests/`: Swift Testing tests of `PanelModel`, the main seam. Put behaviour tests here.
-- `AppTests/`: snapshot tests that render `PanelView` with a fixed clock, time zone and locale to `AppTests/__Snapshots__/*.png`. A new or changed image is written in place and the test fails. Show the human the image diff: committing accepts it, `git checkout` rejects it.
-- `UITests/`: one XCUITest smoke test. It launches the app, opens the panel, attaches a `panel` screenshot and quits via ⋯.
+Layout: `Core/` is the pure `TimezoneCore` framework (Foundation only), `App/` the SwiftUI menu bar app; tests in `CoreTests/` (behaviour), `AppTests/` (panel snapshots), `UITests/` (real-app smoke test).
+
+**Testing**: before writing or fixing a test, or when a snapshot goes red, read `docs/agents/testing.md`.

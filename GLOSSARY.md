@@ -5,8 +5,12 @@ A macOS menu bar tool for converting a single moment across several time zones a
 ## Language
 
 **Zone**:
-One row in the panel: a user-chosen label paired with a time zone.
-_Avoid_: Clock, city, location, row
+A user-chosen label paired with a time zone; the panel shows each one as a Row.
+_Avoid_: Clock, city, location
+
+**Row**:
+How the panel shows one Zone at the Cursor: its label, local time, Day offset and abbreviation, beside its hour strip.
+_Avoid_: Line, entry
 
 **Home zone**:
 The Zone matching the Mac's current system time zone; always first, and its day defines the Timeline.
