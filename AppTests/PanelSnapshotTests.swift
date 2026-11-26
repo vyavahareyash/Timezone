@@ -31,13 +31,24 @@ struct PanelSnapshotTests {
         try assertSnapshot("home-moved", zone: "Europe/Berlin", locale: "en_GB", movedCursorTo: Self.now + 3 * 3600)
     }
 
+    @Test func searchShowsMatchingCitiesWithCountry() throws {
+        try assertSnapshot("search-pune", zone: "Europe/Berlin", locale: "en_GB", searching: "pun")
+    }
+
+    @Test func addedZoneShowsBelowHome() throws {
+        try assertSnapshot("zone-added", zone: "Europe/Berlin", locale: "en_GB", addingCities: ["Pune", "San Francisco"])
+    }
+
     private func assertSnapshot(
         _ name: String, zone: String, locale: String, colorScheme: ColorScheme = .light, at instant: Date = now,
-        movedCursorTo cursor: Date? = nil, filePath: String = #filePath
+        movedCursorTo cursor: Date? = nil, searching query: String? = nil, addingCities: [String] = [],
+        filePath: String = #filePath
     ) throws {
-        let model = PanelModel(clock: { instant }, systemTimeZone: { TimeZone(identifier: zone)! })
+        let cities = CityIndex.bundled()
+        let model = PanelModel(clock: { instant }, systemTimeZone: { TimeZone(identifier: zone)! }, cities: cities)
+        for name in addingCities { model.addZone(try #require(cities.search(name).first)) }
         if let cursor { model.moveCursor(to: cursor) }
-        let view = PanelView(model: model, opensAtNow: cursor == nil)
+        let view = PanelView(model: model, opensAtNow: cursor == nil, query: query)
             .background(.background)
             .environment(\.locale, Locale(identifier: locale))
             .environment(\.colorScheme, colorScheme)

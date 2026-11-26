@@ -131,3 +131,51 @@ struct PanelModelTests {
         #expect(model.timeline == DateInterval(start: utc("2026-09-20T18:30:00Z"), end: utc("2026-09-21T18:30:00Z")))
     }
 }
+
+struct ZoneSearchTests {
+    private static let fixture = CityIndex(tsv: """
+        Zürich\tCH\tEurope/Zurich
+        Pune\tIN\tAsia/Kolkata
+        San Francisco\tUS\tAmerica/Los_Angeles
+        San Francisco\tAR\tAmerica/Argentina/Cordoba
+        Sanaa\tYE\tAsia/Aden
+        """)
+
+    @Test(arguments: [("pune", "Pune"), ("ZURICH", "Zürich"), ("zür", "Zürich"), ("san fr", "San Francisco")])
+    func searchIsCaseAndDiacriticInsensitivePrefix(query: String, name: String) {
+        #expect(Self.fixture.search(query).first?.name == name)
+    }
+
+    @Test func resultsKeepPopulationOrderAndAreCapped() {
+        #expect(Self.fixture.search("san").map(\.countryCode) == ["US", "AR", "YE"])
+        #expect(Self.fixture.search("san", limit: 2).count == 2)
+        #expect(Self.fixture.search("  ").isEmpty)
+    }
+
+    @Test func choosingACityAddsALabelledZoneAfterHomeThatSurvivesRelaunch() {
+        var saved: Data?
+        let now = Date(timeIntervalSince1970: 1_790_000_000)
+        func make() -> PanelModel {
+            PanelModel(clock: { now }, systemTimeZone: { berlin }, cities: Self.fixture,
+                       loadZones: { saved }, saveZones: { saved = $0 })
+        }
+        let model = make()
+        #expect(model.rows.count == 1) // first launch: Home only
+
+        model.addZone(model.search("pune")[0])
+        model.addZone(model.search("pune")[0]) // duplicate ignored
+
+        #expect(model.rows.map(\.label) == ["Berlin", "Pune"])
+        #expect(model.rows[1].timeZone.identifier == "Asia/Kolkata")
+        #expect(model.rows[1].time == model.cursor)
+        #expect(make().rows.map(\.label) == ["Berlin", "Pune"])
+    }
+
+    @Test func bundledListFindsTheTicketsCities() {
+        let index = CityIndex.bundled()
+        #expect(index.search("pune").first?.timeZoneIdentifier == "Asia/Kolkata")
+        #expect(index.search("san fr").first?.timeZoneIdentifier == "America/Los_Angeles")
+        #expect(index.search("zurich").first?.name == "Zürich")
+        #expect(index.search("a").count == 8)
+    }
+}

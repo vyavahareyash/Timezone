@@ -1,0 +1,10 @@
+#!/bin/bash
+# Regenerates Core/cities.tsv from GeoNames cities15000 (CC BY 4.0, see ADR-0003):
+# "city<TAB>country code<TAB>IANA time zone", most populous first.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+curl -sSL https://download.geonames.org/export/dump/cities15000.zip -o "$tmp/c.zip"
+unzip -oq "$tmp/c.zip" -d "$tmp"
+awk -F'\t' '{print $15 "\t" $2 "\t" $9 "\t" $18}' "$tmp/cities15000.txt" | sort -t$'\t' -k1,1nr -s | cut -f2- > Core/cities.tsv
+wc -l Core/cities.tsv

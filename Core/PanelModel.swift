@@ -14,6 +14,8 @@ public struct ZoneRow {
 @Observable public final class PanelModel {
     private let clock: () -> Date
     private let systemTimeZone: () -> TimeZone
+    private let cities: CityIndex
+    private let saveZones: (Data) -> Void
 
     private var homeZone: TimeZone
     public private(set) var now: Date
@@ -21,9 +23,24 @@ public struct ZoneRow {
     public private(set) var cursor: Date
     public private(set) var isFollowingNow = true
 
-    public init(clock: @escaping () -> Date, systemTimeZone: @escaping () -> TimeZone) {
+    /// The user's added Zones (the Home zone is separate), persisted through `saveZones`.
+    public private(set) var zones: [AddedZone] = []
+
+    public struct AddedZone: Codable, Equatable {
+        public let label: String
+        public let timeZoneIdentifier: String
+    }
+
+    public init(
+        clock: @escaping () -> Date, systemTimeZone: @escaping () -> TimeZone,
+        cities: CityIndex = CityIndex(tsv: ""),
+        loadZones: () -> Data? = { nil }, saveZones: @escaping (Data) -> Void = { _ in }
+    ) {
         self.clock = clock
         self.systemTimeZone = systemTimeZone
+        self.cities = cities
+        self.saveZones = saveZones
+        zones = loadZones().flatMap { try? JSONDecoder().decode([AddedZone].self, from: $0) } ?? []
         homeZone = systemTimeZone()
         let now = clock()
         self.now = now
@@ -76,10 +93,32 @@ public struct ZoneRow {
         let zone = homeZone
         // "America/Argentina/Buenos_Aires" -> "Buenos Aires"
         let label = zone.identifier.split(separator: "/").last.map(String.init) ?? zone.identifier
+        return row(label: label.replacingOccurrences(of: "_", with: " "), timeZone: zone)
+    }
+
+    /// The Home zone first, then the added Zones in the order they were added.
+    public var rows: [ZoneRow] {
+        [homeRow] + zones.compactMap { zone in
+            TimeZone(identifier: zone.timeZoneIdentifier).map { row(label: zone.label, timeZone: $0) }
+        }
+    }
+
+    private func row(label: String, timeZone: TimeZone) -> ZoneRow {
         let timeline = timeline
         let cells = stride(from: timeline.start, to: timeline.end, by: 3600).map {
             DateInterval(start: $0, end: min($0 + 3600, timeline.end))
         }
-        return ZoneRow(label: label.replacingOccurrences(of: "_", with: " "), timeZone: zone, time: cursor, cells: cells)
+        return ZoneRow(label: label, timeZone: timeZone, time: cursor, cells: cells)
+    }
+
+    /// Cities matching `query`, for choosing a Zone to add.
+    public func search(_ query: String) -> [City] { cities.search(query) }
+
+    /// Add a Zone labelled with the city; adding the same city twice does nothing.
+    public func addZone(_ city: City) {
+        let zone = AddedZone(label: city.name, timeZoneIdentifier: city.timeZoneIdentifier)
+        guard TimeZone(identifier: zone.timeZoneIdentifier) != nil, !zones.contains(zone) else { return }
+        zones.append(zone)
+        if let data = try? JSONEncoder().encode(zones) { saveZones(data) } // never overwrite saved Zones with nothing
     }
 }

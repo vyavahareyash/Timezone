@@ -8,6 +8,10 @@ A macOS menu bar tool for converting a single moment across several time zones a
 A user-chosen label paired with a time zone; the panel shows each one as a Row.
 _Avoid_: Clock, city, location
 
+**City**:
+An entry in the bundled GeoNames list (name, country, time zone) that the user searches to add a Zone; choosing one creates a Zone labelled with its name.
+_Avoid_: Location, place
+
 **Row**:
 How the panel shows one Zone at the Cursor: its label, local time, Day offset and abbreviation, beside its hour strip.
 _Avoid_: Line, entry
