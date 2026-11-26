@@ -22,11 +22,16 @@ struct PanelSnapshotTests {
         try assertSnapshot("home-dark", zone: "Asia/Kolkata", locale: "en_GB", colorScheme: .dark)
     }
 
+    @Test func fallBackDayHas25HourTimeline() throws {
+        let fallBackDay = Date(timeIntervalSince1970: 1_792_929_600) // 2026-10-25 12:00 UTC, Berlin falls back that night
+        try assertSnapshot("home-25h", zone: "Europe/Berlin", locale: "en_GB", at: fallBackDay)
+    }
+
     private func assertSnapshot(
-        _ name: String, zone: String, locale: String, colorScheme: ColorScheme = .light,
+        _ name: String, zone: String, locale: String, colorScheme: ColorScheme = .light, at instant: Date = now,
         filePath: String = #filePath
     ) throws {
-        let model = PanelModel(clock: { Self.now }, systemTimeZone: { TimeZone(identifier: zone)! })
+        let model = PanelModel(clock: { instant }, systemTimeZone: { TimeZone(identifier: zone)! })
         let view = PanelView(model: model)
             .background(.background)
             .environment(\.locale, Locale(identifier: locale))
