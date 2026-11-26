@@ -18,12 +18,14 @@ One-time: `brew install xcodegen` and `git config core.hooksPath .githooks` (pre
 
 ```sh
 DD=~/Library/Developer/Xcode/DerivedData/Timezone-cli
+# Keeps results and real errors; drops simulator/linkd log spam. Rerun unfiltered if output looks wrong.
+F='[0-9]: error:|^error:|✘|↳ (Recorded|Snapshot|Expectation)|✔ Test run|\*\* (TEST|BUILD)'
 xcodegen
-xcodebuild build -scheme Timezone -destination 'platform=macOS' -derivedDataPath $DD
+xcodebuild build -scheme Timezone -destination 'platform=macOS' -derivedDataPath $DD 2>&1 | grep -E "$F"
 open $DD/Build/Products/Debug/Timezone.app
 
 # All tests; then export UI-test screenshots to build/screenshots/
-rm -rf build && xcodebuild test -scheme Timezone -destination 'platform=macOS' -derivedDataPath $DD -resultBundlePath build/Tests.xcresult
+rm -rf build && xcodebuild test -scheme Timezone -destination 'platform=macOS' -derivedDataPath $DD -resultBundlePath build/Tests.xcresult 2>&1 | grep -E "$F"
 xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/screenshots
 ```
 
