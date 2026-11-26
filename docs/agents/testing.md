@@ -1,6 +1,6 @@
 # Testing
 
-Three test targets, all run by the `Timezone` scheme (commands in `AGENTS.md`).
+Three test targets, all run by the `Timezone` scheme via `scripts/dev` (modes in `AGENTS.md`).
 
 ## `CoreTests/`: behaviour
 
@@ -21,7 +21,7 @@ One XCUITest launches the built app with `TZ` pinned, clicks the status item, at
 
 - The panel appears as a `Dialog` in the accessibility tree, not a window.
 - `XCUIElement.screenshot()` fails for a panel on a non-main display, so the test crops it from its whole screen.
-- Export screenshots after a run: `xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/screenshots` (the panel is `panel_*.png`; `manifest.json` maps names).
+- `scripts/dev test-all` exports screenshots to `build/screenshots/` (the panel is `panel_*.png`; `manifest.json` maps names).
 
 ## Build location
 

@@ -1,9 +1,4 @@
 #!/bin/sh
 # Fast tests before every push: core + snapshots. The UI smoke test drives the mouse; run it by hand.
 # A changed snapshot is rewritten in place and blocks the push: review the image diff, then commit or git checkout.
-set -e
-cd "$(git rev-parse --show-toplevel)"
-xcodegen --quiet
-xcodebuild test -scheme Timezone -destination 'platform=macOS' -quiet \
-  -derivedDataPath "$HOME/Library/Developer/Xcode/DerivedData/Timezone-cli" \
-  -only-testing:TimezoneCoreTests -only-testing:TimezoneTests
+exec "$(git rev-parse --show-toplevel)/scripts/dev" test

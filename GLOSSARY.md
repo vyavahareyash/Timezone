@@ -21,8 +21,12 @@ Today in the Home zone, from midnight to midnight, that every Zone is laid out a
 _Avoid_: Axis, ruler, day view
 
 **Cursor**:
-The single moment the user is inspecting, shown in every Zone's local time at once.
-_Avoid_: Selected time, probe, slider (the slider is only the control that moves it)
+The single moment the user is inspecting, shown in every Zone's local time at once; drawn as a vertical line through every strip.
+_Avoid_: Selected time, probe, slider
+
+**Cursor handle**:
+The knob at the top of the Cursor line: drag it (or press anywhere on a strip) to move the Cursor; when focused, ← / → move it 15 minutes.
+_Avoid_: Thumb, knob, scrubber
 
 **Now**:
 The current real-world moment, marked on the Timeline and the Cursor's starting position.

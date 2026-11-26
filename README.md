@@ -22,9 +22,7 @@ Walking skeleton: the panel shows the Home zone. See the [v1 spec (#1)](https://
 ## Build
 
 ```sh
-xcodegen
-xcodebuild build -scheme Timezone -destination 'platform=macOS' -derivedDataPath ~/Library/Developer/Xcode/DerivedData/Timezone-cli
-open ~/Library/Developer/Xcode/DerivedData/Timezone-cli/Build/Products/Debug/Timezone.app
+scripts/dev run
 ```
 
 For tests, panel snapshots and UI screenshots, see [AGENTS.md](AGENTS.md#build-and-test).

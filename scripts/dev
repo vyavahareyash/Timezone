@@ -1,0 +1,31 @@
+#!/bin/bash
+# Usage: scripts/dev [test|test-all|run]
+#   test      core + snapshot tests (default; what pre-push runs)
+#   test-all  adds the UI smoke test (takes over the mouse ~10 s), exports screenshots to build/screenshots/
+#   run       builds and opens the app
+# Output keeps results and real errors only; VERBOSE=1 shows the full xcodebuild log.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+DD="$HOME/Library/Developer/Xcode/DerivedData/Timezone-cli"
+F='[0-9]: error:|^error:|✘|↳ (Recorded|Snapshot|Expectation)|✔ Test run|\*\* (TEST|BUILD)'
+filter() { if [ -n "${VERBOSE:-}" ]; then cat; else grep -E "$F" || true; fi; }
+xcb() { xcodebuild "$@" -scheme Timezone -destination 'platform=macOS' -derivedDataPath "$DD" 2>&1 | filter; }
+
+xcodegen --quiet
+case "${1:-test}" in
+  test)
+    xcb test -only-testing:TimezoneCoreTests -only-testing:TimezoneTests ;;
+  test-all)
+    rm -rf build
+    status=0
+    xcb test -resultBundlePath build/Tests.xcresult || status=$?
+    xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/screenshots >/dev/null
+    echo "Screenshots in build/screenshots/ (manifest.json maps names)"
+    exit $status ;;
+  run)
+    xcb build
+    open "$DD/Build/Products/Debug/Timezone.app" ;;
+  *)
+    sed -n '2,6p' "$0"; exit 64 ;;
+esac
