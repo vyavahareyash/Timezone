@@ -185,6 +185,31 @@ struct ZoneStripTests {
         #expect(model.rows.map(\.dayOffset) == [0, 0, -1])
     }
 
+    @Test func hoursAreShownEveryThreeAndOnTheCursorCellNeverOnStubs() {
+        let model = makeModel(now: "2026-09-21T14:13:20Z", zones: [("Pune", "Asia/Kolkata")])
+        model.moveCursor(to: utc("2026-09-21T14:00:00Z")) // Berlin 16:00, Pune 19:30
+
+        let home = model.rows[0].cells
+        #expect(home.filter(\.containsCursor).map(\.hour) == [16])
+        #expect(home.filter(\.showsHour).map(\.hour) == [0, 3, 6, 9, 12, 15, 16, 18, 21])
+
+        let pune = model.rows[1].cells
+        #expect(pune.filter(\.containsCursor).map(\.hour) == [19]) // not a multiple of 3, shown anyway
+        #expect(pune.first?.showsHour == false) // the stub at 0:00 Berlin
+        #expect(pune.last?.showsHour == false)
+    }
+
+    @Test func cellHoursFollowALocalDSTChange() {
+        // Los Angeles falls back on 2026-11-01 while Home (Berlin) has a plain 24-hour day.
+        let model = makeModel(now: "2026-11-01T12:00:00Z", zones: [("Los Angeles", "America/Los_Angeles")])
+        let hours = model.rows[1].cells.map(\.hour)
+
+        // Berlin midnight is 16:00 PDT the day before; LA's clock then repeats 01:00 (PDT, then PST).
+        #expect(hours.first == 16)
+        #expect(hours.filter { $0 == 1 }.count == 2)
+        #expect(model.rows[1].cells.allSatisfy { $0.isWhole })
+    }
+
     @Test func abbreviationIsTheZonesAtTheCursorAndFlipsAcrossADSTChange() {
         let model = makeModel(now: "2026-03-29T12:00:00Z", zones: [("Pune", "Asia/Kolkata")])
         // en_GB has no short name for Kolkata, so it falls back to the GMT offset.

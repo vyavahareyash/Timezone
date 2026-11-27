@@ -22,6 +22,10 @@ public struct HourCell {
     public let hour: Int
     /// False for a stub at either end of the Timeline, where the Zone's hours don't line up with Home's.
     public let isWhole: Bool
+    /// The Cursor falls within this cell.
+    public let containsCursor: Bool
+    /// Whether the strip prints `hour` here: every 3 local hours and under the Cursor, never on a stub.
+    public var showsHour: Bool { isWhole && (hour % 3 == 0 || containsCursor) }
 }
 
 /// Everything the panel shows; views only render it.
@@ -100,9 +104,7 @@ public struct HourCell {
 
     /// Today in the Home zone, midnight to midnight: 23, 24 or 25 hours.
     public var timeline: DateInterval {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = homeZone
-        return calendar.dateInterval(of: .day, for: now)!
+        calendar(in: homeZone).dateInterval(of: .day, for: now)!
     }
 
     public var homeRow: ZoneRow {
@@ -120,9 +122,21 @@ public struct HourCell {
     }
 
     private func row(label: String, timeZone: TimeZone, isHome: Bool) -> ZoneRow {
+        ZoneRow(label: label, timeZone: timeZone, time: cursor, cells: cells(in: timeZone), isHome: isHome,
+                dayOffset: dayNumber(cursor, in: timeZone) - dayNumber(cursor, in: homeZone),
+                abbreviation: abbreviation(of: timeZone, at: cursor))
+    }
+
+    private func calendar(in zone: TimeZone) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        return calendar
+    }
+
+    /// The Timeline cut on `zone`'s own local hours.
+    private func cells(in zone: TimeZone) -> [HourCell] {
         let timeline = timeline
-        var local = Calendar(identifier: .gregorian)
-        local.timeZone = timeZone
+        let local = calendar(in: zone)
         var cells: [HourCell] = []
         var start = timeline.start
         while start < timeline.end {
@@ -130,12 +144,11 @@ public struct HourCell {
             let end = min(hour.end, timeline.end)
             cells.append(HourCell(interval: DateInterval(start: start, end: end),
                                   hour: local.component(.hour, from: start),
-                                  isWhole: start == hour.start && end == hour.end))
+                                  isWhole: start == hour.start && end == hour.end,
+                                  containsCursor: start <= cursor && cursor < end))
             start = end
         }
-        return ZoneRow(label: label, timeZone: timeZone, time: cursor, cells: cells, isHome: isHome,
-                       dayOffset: dayNumber(cursor, in: timeZone) - dayNumber(cursor, in: homeZone),
-                       abbreviation: abbreviation(of: timeZone, at: cursor))
+        return cells
     }
 
     /// The short name in `locale` (CET, IST), falling back to Foundation's GMT offset where the locale has none.
@@ -146,11 +159,8 @@ public struct HourCell {
 
     /// The local calendar day of `date` in `zone`, counted in days since 1970 (as a UTC day).
     private func dayNumber(_ date: Date, in zone: TimeZone) -> Int {
-        var local = Calendar(identifier: .gregorian)
-        local.timeZone = zone
-        var gmt = Calendar(identifier: .gregorian)
-        gmt.timeZone = TimeZone(identifier: "UTC")!
-        let day = gmt.date(from: local.dateComponents([.year, .month, .day], from: date))!
+        let components = calendar(in: zone).dateComponents([.year, .month, .day], from: date)
+        let day = calendar(in: TimeZone(identifier: "UTC")!).date(from: components)!
         return Int(day.timeIntervalSince1970 / 86_400)
     }
 

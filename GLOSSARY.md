@@ -24,6 +24,10 @@ _Avoid_: Local zone, primary zone, default zone
 Today in the Home zone, from midnight to midnight, that every Zone is laid out against; usually 24 hours, but 23 or 25 on a Home-zone DST change day.
 _Avoid_: Axis, ruler, day view
 
+**Hour cell**:
+The part of a Zone's strip within one of its local hours; at either end of the Timeline it can be a partial stub, which is never numbered.
+_Avoid_: Tile, slot, block
+
 **Cursor**:
 The single moment the user is inspecting, shown in every Zone's local time at once; drawn as a vertical line through every strip.
 _Avoid_: Selected time, probe, slider

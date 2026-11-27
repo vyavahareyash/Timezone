@@ -66,9 +66,7 @@ struct PanelView: View {
                             .environment(\.timeZone, row.timeZone)
                             .font(.title2.monospacedDigit())
                     }
-                    HourStrip(timeline: model.timeline, cells: row.cells, now: model.now, cursor: model.cursor,
-                              isFollowingNow: model.isFollowingNow, showsNowLabel: row.isHome,
-                              onMove: model.moveCursor(to:), onNudge: model.nudgeCursor(steps:))
+                    HourStrip(model: model, row: row)
                 }
                 .padding(.horizontal, 6)
                 .background(row.isHome ? Color.accentColor.opacity(0.1) : Color.clear,
@@ -105,28 +103,33 @@ struct PanelView: View {
 
 /// A Row's hour cells laid out against the Timeline, with Now as a red line through every strip and the Cursor through it.
 struct HourStrip: View {
-    let timeline: DateInterval
-    let cells: [HourCell]
-    let now: Date
-    let cursor: Date
-    let isFollowingNow: Bool
-    /// Only the Home row labels Now, so the strips' labels don't repeat.
-    let showsNowLabel: Bool
-    let onMove: (Date) -> Void
-    let onNudge: (Int) -> Void
+    let model: PanelModel
+    let row: ZoneRow
+
+    private static let cellHeight: CGFloat = 20
+    /// Room above the strip: only the Home row labels Now, so the labels don't repeat.
+    private static let nowLabelRoom: CGFloat = 26
+    private static let plainRoom: CGFloat = 8
+
+    private var timeline: DateInterval { model.timeline }
+    private var cursor: Date { model.cursor }
+    private var now: Date { model.now }
+    private var showsNowLabel: Bool { row.isHome }
+    private var isFollowingNow: Bool { model.isFollowingNow }
+    private func onNudge(_ steps: Int) { model.nudgeCursor(steps: steps) }
 
     var body: some View {
         GeometryReader { geometry in
             let x = { (date: Date) in geometry.size.width * date.timeIntervalSince(timeline.start) / timeline.duration }
             ZStack(alignment: .topLeading) {
-                ForEach(cells, id: \.interval.start) { cell in
-                    hourCell(cell, cursorIsIn: cell.interval.start <= cursor && cursor < cell.interval.end)
-                        .frame(width: max(x(cell.interval.end) - x(cell.interval.start) - 1, 0), height: 20)
+                ForEach(row.cells, id: \.interval.start) { cell in
+                    hourCell(cell)
+                        .frame(width: max(x(cell.interval.end) - x(cell.interval.start) - 1, 0), height: Self.cellHeight)
                         .offset(x: x(cell.interval.start))
                 }
                 Rectangle()
                     .fill(.red)
-                    .frame(width: 1, height: 20)
+                    .frame(width: 1, height: Self.cellHeight)
                     .offset(x: x(now))
                     .allowsHitTesting(false)
                 if showsNowLabel {
@@ -137,7 +140,7 @@ struct HourStrip: View {
                 }
                 Rectangle()
                     .fill(.tint)
-                    .frame(width: 2, height: 20)
+                    .frame(width: 2, height: Self.cellHeight)
                     .offset(x: x(cursor) - 1)
                 // The Cursor handle: dragging it is the strip's own drag below, which it sits inside.
                 Circle()
@@ -156,24 +159,22 @@ struct HourStrip: View {
             .contentShape(Rectangle())
             // Pressing anywhere jumps the Cursor there; holding and dragging scrubs.
             .gesture(DragGesture(minimumDistance: 0).onChanged { value in
-                onMove(timeline.start + value.location.x / geometry.size.width * timeline.duration)
+                model.moveCursor(to: timeline.start + value.location.x / geometry.size.width * timeline.duration)
             })
         }
         .frame(height: 28)
-        .padding(.top, showsNowLabel ? 26 : 8)
+        .padding(.top, showsNowLabel ? Self.nowLabelRoom : Self.plainRoom)
     }
 
-    /// A whole hour is numbered every 3 local hours and under the Cursor; a stub at either end never is.
-    private func hourCell(_ cell: HourCell, cursorIsIn: Bool) -> some View {
-        let number = cell.isWhole && (cell.hour % 3 == 0 || cursorIsIn) ? "\(cell.hour)" : nil
-        return ZStack {
+    private func hourCell(_ cell: HourCell) -> some View {
+        ZStack {
             RoundedRectangle(cornerRadius: 2).fill(.quaternary)
-            if cursorIsIn {
+            if cell.containsCursor {
                 RoundedRectangle(cornerRadius: 2).stroke(.tint, lineWidth: 1.5)
             }
-            if let number {
-                Text(number)
-                    .font(.system(size: 8, weight: cursorIsIn ? .bold : .regular).monospacedDigit())
+            if cell.showsHour {
+                Text("\(cell.hour)")
+                    .font(.system(size: 8, weight: cell.containsCursor ? .bold : .regular).monospacedDigit())
                     .fixedSize() // a cell is narrower than two digits: don't let them wrap
             }
         }
