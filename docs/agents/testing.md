@@ -1,6 +1,6 @@
 # Testing
 
-Three test targets, all run by the `Timezone` scheme via `scripts/dev` (modes in `AGENTS.md`). Run one suite or test with `scripts/dev test-one TimezoneCoreTests/ZoneEditingTests`, or `TimezoneTests/PanelSnapshotTests/<test>` for a snapshot.
+Three test targets, all run by the `Timezone` scheme via `scripts/dev` (modes in `AGENTS.md`). Run one suite or test with `scripts/dev test-one TimezoneCoreTests/ZoneEditingTests`, or `TimezoneTests/PanelSnapshotTests/<test>()` for a snapshot.
 
 ## `CoreTests/`: behaviour
 
@@ -18,12 +18,13 @@ Render `PanelView` with a fixed clock, time zone, locale and color scheme to `Ap
 - To see a test's output, `print("DEBUG: ...")`; `scripts/dev` keeps those lines. `VERBOSE=1` dumps multi-KB compiler command lines.
 - A red `scripts/dev test` rewrites snapshots in place, so `git stash` or a branch switch around it leaves modified PNGs that block `git stash pop`. To compare against a clean tree, use a `git worktree`. Experiments with a view change rewrite the committed PNGs as well: restore them with `git checkout -- AppTests/__Snapshots__/` before the next run.
 - The target is hosted in `Timezone.app` (it uses `@testable import Timezone`).
+- Liquid Glass (the "Back to Now" and + buttons) renders in snapshots when the whole suite runs, but not when one snapshot test runs alone, so a lone run rewrites its PNG without glass. Run `scripts/dev test-one TimezoneTests/PanelSnapshotTests` (the suite) to check a snapshot. A single Swift Testing test needs its parentheses (`.../homeZone24Hour()`); without them `test-one` runs 0 tests and passes.
 
 ## `UITests/`: real-app smoke test
 
 One XCUITest launches the built app with `TZ` pinned, clicks the status item, adds a Zone (Paris) through + and the search field, attaches a `panel` screenshot, and quits via ⋯. It takes over the mouse for ~10 s, so the fast loop and the pre-push hook skip it.
 
-The run launches with `-zones none`, so the app ignores your saved Zones and starts empty (`defaults delete` is not needed and was unreliable from the test runner). The run still writes its Zone to the app's `com.vyavahareyash.Timezone` defaults, so it backs them up before the run and restores the backup in tearDown. If a run is killed mid-way, the backup is in the temporary directory as `PanelSmokeTests-defaults.plist`.
+The run launches with `-zones none -homeLabels none`, so the app ignores your saved Zones and Home names and starts empty (`defaults delete` is not needed and was unreliable from the test runner). The run still writes its Zone to the app's `com.vyavahareyash.Timezone` defaults, so it backs them up before the run and restores the backup in tearDown. If a run is killed mid-way, the backup is in the temporary directory as `PanelSmokeTests-defaults.plist`.
 
 - The status item must be hittable, or the test fails. A status item hidden in the menu bar overflow (notch or crowded bar) is not reachable; free menu bar space or move the app's item to the main display and rerun. Never add a skip for this: a skipped UI test hides the regressions it exists to catch.
 - The panel appears as a `Dialog` in the accessibility tree, not a window.
@@ -32,7 +33,7 @@ The run launches with `-zones none`, so the app ignores your saved Zones and sta
 - Any accessibility element overlapping the Cursor handle (a label, a per-cell view) makes the click on it miss, and the failed `XCTAssert` is soft, so the test fails later at "Back to Now". Mark decoration `.accessibilityHidden(true)`.
 - `click()` on a focusable element in the panel works, and `typeText` on a clicked TextField works (the add-Zone search, #11). `typeKey` or a click at an offset from the element closes the panel.
 - Drags can't be tested here. XCUI's `press(forDuration:thenDragTo:)` doesn't reach the panel's SwiftUI drag gestures: it doesn't move the Cursor, and it doesn't reorder a Zone row either (checked with a control, at hold times 0.05, 0.2 and 0.5 s). Posting mouse events with `CGEvent` from the runner needs event-posting permission, which the runner doesn't have (`CGPreflightPostEventAccess()` is false), and an ad-hoc signed runner loses any grant on each build. So a drag stays a manual check until the signing or CI setup changes.
-- The Cursor handle's accessibility frame spans the whole strip's height (256×28 points in the smoke run), not the 16-point handle. Aim at the strip's centre line, not the handle's corner.
+- The Cursor handle is the bead on the strip (about 14×14 points). A click on it snaps the Cursor to its own quarter hour and may not change the time: click the strip about 80 points away, toward the panel's middle (`stripPoint`).
 - Clearing saved defaults from the test runner (`defaults delete` via `Process`) did not reliably change what the app reads. Override the value with a launch argument instead, as the add-Zone test does with `app.launchArguments = ["-zones", "none"]`.
 - `scripts/dev test-all` exports screenshots to `build/screenshots/` (the panel is `panel_*.png`; `manifest.json` maps names).
 - `scripts/dev test-all` prints a `Test Case … passed|failed` line per XCTest case, UI tests included, so the summary no longer hides them. For the full per-test tree, read the bundle: `xcrun xcresulttool get test-results tests --path build/Tests.xcresult | grep -E '"(name|result)"'`.

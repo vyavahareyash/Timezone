@@ -185,33 +185,39 @@ struct ZoneStripTests {
         #expect(model.rows.map(\.dayOffset) == [0, 0, -1])
     }
 
-    @Test func hoursAreShownEveryThreeAndOnTheCursorCellNeverOnStubs() {
-        let model = makeModel(now: "2026-09-21T14:13:20Z", zones: [("Pune", "Asia/Kolkata")])
-        model.moveCursor(to: utc("2026-09-21T14:00:00Z")) // Berlin 16:00, Pune 19:30
+    @Test(arguments: [
+        // typed, in, Cursor (Timeline: Berlin's 2026-09-21, 22:00Z the day before to 22:00Z)
+        ("10:07", "Asia/Kolkata", "2026-09-21T04:37:00Z"), // to the exact minute, no snapping
+        ("2:30 pm", "Europe/Berlin", "2026-09-21T12:30:00Z"),
+        ("2:30\u{202F}PM", "Europe/Berlin", "2026-09-21T12:30:00Z"), // as en_US formats it
+        ("9", "Europe/Berlin", "2026-09-21T07:00:00Z"),
+        ("1430", "Europe/Berlin", "2026-09-21T12:30:00Z"),
+        ("12 am", "Europe/Berlin", "2026-09-20T22:00:00Z"),
+        ("8:00", "Pacific/Auckland", "2026-09-21T20:00:00Z"), // Auckland's next day: 08:00 on the 21st is before the Timeline
+    ])
+    func typingAZonesTimeMovesTheCursorThereAndEndsFollowingNow(typed: String, zone: String, cursor: String) {
+        let model = makeModel(now: "2026-09-21T14:13:20Z")
 
-        let home = model.rows[0].cells
-        #expect(home.filter(\.containsCursor).map(\.hour) == [16])
-        #expect(home.filter(\.showsHour).map(\.hour) == [0, 3, 6, 9, 12, 15, 16, 18, 21])
-
-        let pune = model.rows[1].cells
-        #expect(pune.filter(\.containsCursor).map(\.hour) == [19]) // not a multiple of 3, shown anyway
-        #expect(pune.first?.showsHour == false) // the stub at 0:00 Berlin
-        #expect(pune.last?.showsHour == false)
+        #expect(model.moveCursor(toLocalTime: typed, in: TimeZone(identifier: zone)!))
+        #expect(model.cursor == utc(cursor))
+        #expect(!model.isFollowingNow)
     }
 
-    @Test func cellsAreBandedByTheirOwnZonesLocalHour() {
-        let model = makeModel(now: "2026-09-21T14:13:20Z", zones: [("Pune", "Asia/Kolkata")])
+    @Test(arguments: ["", "abc", "25:00", "9:60", "13 pm", "0 am", "9:3"])
+    func textThatIsNotATimeLeavesTheCursor(typed: String) {
+        let model = makeModel(now: "2026-09-21T14:13:20Z")
 
-        // Home (Berlin): night 0–6, evening 7–8, working 9–17, evening 18–21, night 22–23.
-        let home: [HourCell.Band] = Array(repeating: .night, count: 7) + Array(repeating: .evening, count: 2)
-            + Array(repeating: .working, count: 9) + Array(repeating: .evening, count: 4) + Array(repeating: .night, count: 2)
-        #expect(model.rows[0].cells.map(\.band) == home)
+        #expect(!model.moveCursor(toLocalTime: typed, in: berlin))
+        #expect(model.cursor == utc("2026-09-21T14:13:20Z"))
+        #expect(model.isFollowingNow)
+    }
 
-        // Pune is half an hour ahead: its whole hours run 4–23 then 0–2; both half-hour stubs fall in hour 3.
-        let pune: [HourCell.Band] = Array(repeating: .night, count: 3) + Array(repeating: .evening, count: 2)
-            + Array(repeating: .working, count: 9) + Array(repeating: .evening, count: 4) + Array(repeating: .night, count: 5)
-        #expect(model.rows[1].cells.filter(\.isWhole).map(\.band) == pune)
-        #expect(model.rows[1].cells.filter { !$0.isWhole }.map(\.band) == [.night, .night])
+    @Test func aTimeInADSTGapIsRefused() {
+        let model = makeModel(now: "2026-03-29T12:00:00Z") // Berlin skips 02:00–03:00 that night
+
+        #expect(!model.moveCursor(toLocalTime: "2:30", in: berlin))
+        #expect(model.moveCursor(toLocalTime: "3:30", in: berlin))
+        #expect(model.cursor == utc("2026-03-29T01:30:00Z"))
     }
 
     @Test func cellHoursFollowALocalDSTChange() {
@@ -309,6 +315,31 @@ struct ZoneEditingTests {
 
         #expect(model.rows.map(\.label) == ["Berlin", "Office"])
         #expect(launch(store).rows.map(\.label) == ["Berlin", "Office"])
+    }
+
+    @Test func renamingHomeIsKeptForItsTimeZoneAcrossTravelAndRelaunch() {
+        var saved: Data?
+        var system = berlin
+        func launch() -> PanelModel {
+            PanelModel(clock: { now }, systemTimeZone: { system },
+                       loadHomeLabels: { saved }, saveHomeLabels: { saved = $0 })
+        }
+        let model = launch()
+
+        model.renameHome(to: "  Home ")
+        #expect(model.homeRow.label == "Home")
+        #expect(launch().homeRow.label == "Home")
+
+        system = TimeZone(identifier: "Asia/Tokyo")!
+        model.tick()
+        #expect(model.homeRow.label == "Tokyo") // travelling: the new zone's own name
+        system = berlin
+        model.tick()
+        #expect(model.homeRow.label == "Home") // back home: the user's name again
+
+        model.renameHome(to: " ")
+        #expect(model.homeRow.label == "Berlin") // blank restores the system's name
+        #expect(launch().homeRow.label == "Berlin")
     }
 
     @Test func removingAZoneDeletesItAndSurvivesRelaunch() {

@@ -24,22 +24,6 @@ public struct HourCell {
     public let hour: Int
     /// False for a stub at either end of the Timeline, where the Zone's hours don't line up with Home's.
     public let isWhole: Bool
-    /// The Cursor falls within this cell.
-    public let containsCursor: Bool
-    /// Whether the strip prints `hour` here: every 3 local hours and under the Cursor, never on a stub.
-    public var showsHour: Bool { isWhole && (hour % 3 == 0 || containsCursor) }
-
-    /// The part of the day this cell's local hour falls in; the strip shades by it.
-    public enum Band { case working, evening, night }
-
-    /// Working 09:00–18:00, evening 07:00–09:00 and 18:00–22:00, night the rest, by the Zone's own local hour.
-    public var band: Band {
-        switch hour {
-        case 9..<18: .working
-        case 7..<9, 18..<22: .evening
-        default: .night
-        }
-    }
 }
 
 /// Everything the panel shows; views only render it.
@@ -49,8 +33,12 @@ public struct HourCell {
     private let cities: CityIndex
     private let locale: Locale
     private let saveZones: (Data) -> Void
+    private let saveHomeLabels: (Data) -> Void
 
     private var homeZone: TimeZone
+    /// The user's names for the Home zone, by time zone identifier: after travelling, Home shows the new zone's own
+    /// name, and coming back restores the user's.
+    private var homeLabels: [String: String] = [:]
     public private(set) var now: Date
     /// The moment every Row shows.
     public private(set) var cursor: Date
@@ -67,14 +55,17 @@ public struct HourCell {
     public init(
         clock: @escaping () -> Date, systemTimeZone: @escaping () -> TimeZone,
         cities: CityIndex = CityIndex(tsv: ""), locale: Locale = .current,
-        loadZones: () -> Data? = { nil }, saveZones: @escaping (Data) -> Void = { _ in }
+        loadZones: () -> Data? = { nil }, saveZones: @escaping (Data) -> Void = { _ in },
+        loadHomeLabels: () -> Data? = { nil }, saveHomeLabels: @escaping (Data) -> Void = { _ in }
     ) {
         self.clock = clock
         self.systemTimeZone = systemTimeZone
         self.cities = cities
         self.locale = locale
         self.saveZones = saveZones
+        self.saveHomeLabels = saveHomeLabels
         zones = loadZones().flatMap { try? JSONDecoder().decode([AddedZone].self, from: $0) } ?? []
+        homeLabels = loadHomeLabels().flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
         homeZone = systemTimeZone()
         let now = clock()
         self.now = now
@@ -105,6 +96,39 @@ public struct HourCell {
 
     private static let cursorStep: TimeInterval = 15 * 60
 
+    /// Move the Cursor to the moment in the Timeline when `timeZone`'s clock reads `text` ("14:30", "2:30 pm", "9"),
+    /// to the exact minute, ending Following Now. Returns false and leaves the Cursor for text that isn't a time, or a
+    /// time the Timeline doesn't contain (a DST gap).
+    @discardableResult
+    public func moveCursor(toLocalTime text: String, in timeZone: TimeZone) -> Bool {
+        guard let (hour, minute) = Self.parseTime(text) else { return false }
+        let local = calendar(in: timeZone)
+        let timeline = timeline
+        let day = local.startOfDay(for: timeline.start)
+        // A 24-hour Timeline holds each local time once, on the Zone's day before, of or after its start.
+        let match = (-1...1).lazy
+            .compactMap { local.date(byAdding: .day, value: $0, to: day) }
+            .compactMap { local.date(bySettingHour: hour, minute: minute, second: 0, of: $0) }
+            .first { timeline.start <= $0 && $0 < timeline.end
+                && local.component(.hour, from: $0) == hour && local.component(.minute, from: $0) == minute }
+        guard let match else { return false }
+        cursor = match
+        isFollowingNow = false
+        return true
+    }
+
+    /// "14:30", "1430", "9", "2:30 pm", "2pm", "2:30 a.m." as an hour (0–23) and minute.
+    private static func parseTime(_ text: String) -> (Int, Int)? {
+        guard let match = text.lowercased().wholeMatch(of: #/\s*(\d{1,2})(?:[:.h]?(\d{2}))?\s*(?:(a|p)\.?(?:m\.?)?)?\s*/#),
+              var hour = Int(match.1) else { return nil }
+        let minute = match.2.flatMap { Int($0) } ?? 0
+        if let half = match.3 {
+            guard (1...12).contains(hour) else { return nil }
+            hour = hour % 12 + (half == "p" ? 12 : 0)
+        }
+        return hour < 24 && minute < 60 ? (hour, minute) : nil
+    }
+
     /// Return the Cursor to Now and resume Following Now.
     public func backToNow() { open() }
 
@@ -124,8 +148,16 @@ public struct HourCell {
     public var homeRow: ZoneRow {
         let zone = homeZone
         // "America/Argentina/Buenos_Aires" -> "Buenos Aires"
-        let label = zone.identifier.split(separator: "/").last.map(String.init) ?? zone.identifier
-        return row(label: label.replacingOccurrences(of: "_", with: " "), timeZone: zone, isHome: true, zoneIndex: nil)
+        let city = zone.identifier.split(separator: "/").last.map(String.init) ?? zone.identifier
+        let label = homeLabels[zone.identifier] ?? city.replacingOccurrences(of: "_", with: " ")
+        return row(label: label, timeZone: zone, isHome: true, zoneIndex: nil)
+    }
+
+    /// Name the Home zone while the Mac is in its time zone; a blank label restores the system's name.
+    public func renameHome(to label: String) {
+        let label = label.trimmingCharacters(in: .whitespaces)
+        homeLabels[homeZone.identifier] = label.isEmpty ? nil : label
+        if let data = try? JSONEncoder().encode(homeLabels) { saveHomeLabels(data) }
     }
 
     /// The Home zone first, then the added Zones in the order they were added. A saved Zone whose time zone
@@ -162,8 +194,7 @@ public struct HourCell {
             let end = min(hour.end, timeline.end)
             cells.append(HourCell(interval: DateInterval(start: start, end: end),
                                   hour: local.component(.hour, from: start),
-                                  isWhole: start == hour.start && end == hour.end,
-                                  containsCursor: start <= cursor && cursor < end))
+                                  isWhole: start == hour.start && end == hour.end))
             start = end
         }
         return cells

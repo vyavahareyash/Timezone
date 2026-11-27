@@ -17,7 +17,7 @@ How the panel shows one Zone at the Cursor: its label, local time, Day offset an
 _Avoid_: Line, entry
 
 **Home zone**:
-The Zone matching the Mac's current system time zone; always first, and its day defines the Timeline.
+The Zone matching the Mac's current system time zone; always first, and its day defines the Timeline. It can be renamed; the name belongs to that time zone, so after travelling Home shows the new zone's own name.
 _Avoid_: Local zone, primary zone, default zone
 
 **Timeline**:
@@ -25,15 +25,15 @@ Today in the Home zone, from midnight to midnight, that every Zone is laid out a
 _Avoid_: Axis, ruler, day view
 
 **Hour cell**:
-The part of a Zone's strip within one of its local hours; at either end of the Timeline it can be a partial stub, which is never numbered.
+The part of a Zone's strip within one of its local hours; at either end of the Timeline it can be a partial stub. The strip is coloured cell by cell like the sky at each local hour.
 _Avoid_: Tile, slot, block
 
 **Cursor**:
-The single moment the user is inspecting, shown in every Zone's local time at once; drawn as a vertical line through every strip.
+The single moment the user is inspecting, shown in every Zone's local time at once; drawn as a white bead on every strip. Moved by dragging, by the arrow keys, or by typing a time into any Zone's clock.
 _Avoid_: Selected time, probe, slider
 
 **Cursor handle**:
-The knob at the top of the Cursor line: drag it (or press anywhere on a strip) to move the Cursor; when focused, ← / → move it 15 minutes.
+The Cursor's white bead on a strip: drag it (or press anywhere on a strip) to move the Cursor; when focused, ← / → move it 15 minutes.
 _Avoid_: Thumb, knob, scrubber
 
 **Now**:
@@ -47,7 +47,3 @@ _Avoid_: Live mode, auto mode
 **Day offset**:
 How a Zone's local date at the Cursor differs from the Home zone's date (−1, 0, +1).
 _Avoid_: Date shift, day badge
-
-**Working hours**:
-The fixed 09:00–18:00 local-time band highlighted in every Zone, so a glance shows whether the Cursor falls in someone's workday.
-_Avoid_: Business hours, office hours, daytime

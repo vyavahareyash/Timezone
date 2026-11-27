@@ -1,7 +1,7 @@
 #!/bin/bash
 # Usage: scripts/dev [test|test-one <Target/Suite[/test]>|test-all|run|cities]
 #   test      core + snapshot tests (default; what pre-push runs)
-#   test-one  one suite or test, e.g. TimezoneCoreTests/ZoneEditingTests or TimezoneTests/PanelSnapshotTests/homeZone24Hour
+#   test-one  one suite or test, e.g. TimezoneCoreTests/ZoneEditingTests or TimezoneTests/PanelSnapshotTests/homeZone24Hour()
 #   test-all  adds the UI smoke test (takes over the mouse ~10 s), exports screenshots to build/screenshots/
 #   run       builds and opens the app
 #   cities    regenerates Core/cities.tsv from GeoNames cities15000 (CC BY 4.0, ADR-0003); needs network
