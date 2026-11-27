@@ -24,14 +24,18 @@ struct PanelView: View {
     @State private var isAdding: Bool
     @State private var query: String
 
-    /// Snapshots of the open search pass `query`, and of an inline rename of the Zone at index `renaming`.
-    init(model: PanelModel, opensAtNow: Bool = true, query: String? = nil, renaming: Int? = nil) {
+    /// Snapshots of the open search pass `query`, of an inline rename of the Zone at index `renaming`, and of a
+    /// drag of the Zone at index `dragging` by `dragOffset` points.
+    init(model: PanelModel, opensAtNow: Bool = true, query: String? = nil, renaming: Int? = nil,
+         dragging: Int? = nil, dragOffset: CGFloat = 0) {
         self.model = model
         self.opensAtNow = opensAtNow
         _isAdding = State(initialValue: query != nil)
         _query = State(initialValue: query ?? "")
         _renaming = State(initialValue: renaming)
         _renameText = State(initialValue: renaming.map { model.zones[$0].label } ?? "")
+        _dragged = State(initialValue: dragging)
+        _dragDistance = State(initialValue: dragOffset)
     }
 
     /// The added Zone being renamed inline, by its index in `model.zones`.
@@ -54,18 +58,30 @@ struct PanelView: View {
     @State private var rowStep: CGFloat = 1
 
     /// Drop the Zone where the drag ends, `rowStep` per row moved; the Home zone stays first.
+    /// The drag is clamped to the list, so the row stops at the top and bottom instead of leaving the panel.
     private func reorder(_ index: Int) -> some Gesture {
         DragGesture(minimumDistance: 4)
             .onChanged { value in
                 dragged = index
-                dragDistance = value.translation.height
+                let top = -CGFloat(index) * rowStep
+                let bottom = CGFloat(model.zones.count - 1 - index) * rowStep
+                dragDistance = min(max(value.translation.height, top), bottom)
             }
-            .onEnded { value in
-                let moved = Int((value.translation.height / rowStep).rounded())
-                model.moveZone(from: index, to: index + moved) // the model clamps to the list
+            .onEnded { _ in
+                let moved = Int((dragDistance / rowStep).rounded())
+                model.moveZone(from: index, to: index + moved)
                 dragged = nil
                 dragDistance = 0
             }
+    }
+
+    /// How far a Zone not being dragged sits from its place: one row toward the gap the dragged Zone would leave.
+    private func shift(_ index: Int) -> CGFloat {
+        guard let dragged, dragged != index else { return 0 }
+        let drop = dragged + Int((dragDistance / rowStep).rounded())
+        if drop > dragged && (dragged + 1...drop).contains(index) { return -rowStep }
+        if drop < dragged && (drop..<dragged).contains(index) { return rowStep }
+        return 0
     }
 
     @ViewBuilder
@@ -111,7 +127,7 @@ struct PanelView: View {
                     }
                     Button("Remove") { renaming = nil; model.removeZone(at: zoneIndex) }
                 }
-                .offset(y: dragged == zoneIndex ? dragDistance : 0)
+                .offset(y: dragged == zoneIndex ? dragDistance : shift(zoneIndex))
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowStep = $0 + Self.rowSpacing }
                 // A drag on the row reorders it; the strip's own drag (a child gesture) still moves the Cursor.
                 .gesture(reorder(zoneIndex), including: renaming == zoneIndex ? .none : .all)
@@ -142,7 +158,6 @@ struct PanelView: View {
                             do { try on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
                             catch { NSLog("Launch at login: %@", error.localizedDescription) }
                         }))
-                    Link("City data: GeoNames (CC BY 4.0)", destination: URL(string: "https://www.geonames.org")!)
                     Button("Quit") { NSApplication.shared.terminate(nil) }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -179,6 +194,9 @@ struct PanelView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                // The city list is GeoNames data (CC BY 4.0, ADR-0003): its credit belongs beside the results.
+                Link("City data: GeoNames (CC BY 4.0)", destination: URL(string: "https://www.geonames.org")!)
+                    .font(.caption)
             }
             Button { isAdding.toggle() } label: { Image(systemName: "plus") }
                 .accessibilityLabel("Add zone")
@@ -232,12 +250,16 @@ struct HourStrip: View {
                     .contentShape(Rectangle())
                     .offset(x: x(cursor) - 8, y: -9)
                     .focusable()
+                    // The system ring stayed where the handle was last focused, not on it: hide it, keep the arrow keys.
+                    .focusEffectDisabled()
                     .onKeyPress(.leftArrow) { onNudge(-1); return .handled }
                     .onKeyPress(.rightArrow) { onNudge(1); return .handled }
                     .accessibilityElement()
                     .accessibilityLabel("Cursor handle")
                     .accessibilityAdjustableAction { direction in onNudge(direction == .increment ? 1 : -1) }
             }
+            // The children are fixed-size, so without this the ZStack shrinks to the handle and only it takes presses.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .contentShape(Rectangle())
             // Pressing anywhere jumps the Cursor there; holding and dragging scrubs.
             .gesture(DragGesture(minimumDistance: 0).onChanged { value in

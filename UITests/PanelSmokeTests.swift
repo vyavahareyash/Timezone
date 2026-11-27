@@ -17,7 +17,8 @@ private func runDefaults(_ arguments: [String]) -> Int32 {
 /// Drives the real app through the menu bar. The panel screenshot lands in the .xcresult bundle.
 @MainActor
 final class PanelSmokeTests: XCTestCase {
-    private var hadDefaults = false
+    // setUp/tearDown are nonisolated on the Xcode 26 SDK, so the flag can't be main-actor state (Swift 6 error there).
+    private nonisolated(unsafe) var hadDefaults = false
 
     override func setUp() {
         super.setUp()
@@ -38,13 +39,9 @@ final class PanelSmokeTests: XCTestCase {
         app.launchArguments = ["-zones", "none"]
         app.launch()
 
-        // A menu bar too crowded for the item (laptop notch) hides it in the overflow, where a click can't reach it.
         let statusItem = app.statusItems.firstMatch
-        _ = statusItem.waitForExistence(timeout: 5)
-        if !statusItem.isHittable {
-            app.terminate()
-            throw XCTSkip("The status item is hidden in the menu bar overflow: free up menu bar space and rerun.")
-        }
+        XCTAssertTrue(statusItem.waitForExistence(timeout: 5))
+        XCTAssertTrue(statusItem.isHittable, "The status item is not reachable: free menu bar space or move it to the main display.")
         statusItem.click()
         XCTAssertTrue(app.staticTexts["Kolkata"].waitForExistence(timeout: 5))
 
@@ -80,9 +77,44 @@ final class PanelSmokeTests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
 
+        // Rename is in the Zone row's right-click menu.
+        panel.staticTexts["Paris"].rightClick()
+        app.menuItems["Rename"].click()
+        XCTAssertTrue(panel.textFields["Label"].waitForExistence(timeout: 5))
+
         panel.menuButtons["More"].click()
         app.menuItems["Quit"].click()
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 5))
+    }
+
+    /// Launches with no saved Zones and opens the panel from the status item.
+    private func launchAndOpenPanel() throws -> (app: XCUIApplication, panel: XCUIElement) {
+        let app = XCUIApplication()
+        app.launchEnvironment["TZ"] = "Asia/Kolkata"
+        app.launchArguments = ["-zones", "none"]
+        app.launch()
+        let statusItem = app.statusItems.firstMatch
+        XCTAssertTrue(statusItem.waitForExistence(timeout: 5))
+        XCTAssertTrue(statusItem.isHittable, "The status item is not reachable: free menu bar space or move it to the main display.")
+        statusItem.click()
+        let panel = app.dialogs.firstMatch
+        XCTAssertTrue(panel.staticTexts["Following Now"].waitForExistence(timeout: 5))
+        return (app, panel)
+    }
+
+    /// A point on the Home strip, `dx` points right of its Cursor handle's centre. The handle's frame spans the
+    /// strip's whole height, so the centre line is inside the cells.
+    private func stripPoint(_ panel: XCUIElement, dx: CGFloat) -> XCUICoordinate {
+        panel.otherElements["Cursor handle"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .withOffset(CGVector(dx: dx, dy: 0))
+    }
+
+    /// A click on a strip moves the Cursor there, so the strip takes the press.
+    func testClickingAStripMovesTheCursor() throws {
+        let (app, panel) = try launchAndOpenPanel()
+        stripPoint(panel, dx: 80).click()
+        XCTAssertTrue(panel.buttons["Back to Now"].waitForExistence(timeout: 5))
+        app.terminate()
     }
 
     /// `XCUIElement.screenshot()` fails for a panel on a non-main display, so crop it out of its whole screen.
