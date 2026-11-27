@@ -20,4 +20,6 @@ One-time: `brew install xcodegen` and `git config core.hooksPath .githooks` (pre
 
 Layout: `Core/` is the pure `TimezoneCore` framework (Foundation only), `App/` the SwiftUI menu bar app; tests in `CoreTests/` (behaviour), `AppTests/` (panel snapshots), `UITests/` (real-app smoke test).
 
+**Shell blocks**: the shell blocks inline interpreters (`python3 - <<EOF`) and `mktemp`. Change files with the Edit tool; when a command you need is blocked, give the user its exact text to run.
+
 **Testing**: before writing or fixing a test, or when a snapshot goes red, read `docs/agents/testing.md`.

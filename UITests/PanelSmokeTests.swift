@@ -38,7 +38,14 @@ final class PanelSmokeTests: XCTestCase {
         app.launchArguments = ["-zones", "none"]
         app.launch()
 
-        app.statusItems.firstMatch.click()
+        // A menu bar too crowded for the item (laptop notch) hides it in the overflow, where a click can't reach it.
+        let statusItem = app.statusItems.firstMatch
+        _ = statusItem.waitForExistence(timeout: 5)
+        if !statusItem.isHittable {
+            app.terminate()
+            throw XCTSkip("The status item is hidden in the menu bar overflow: free up menu bar space and rerun.")
+        }
+        statusItem.click()
         XCTAssertTrue(app.staticTexts["Kolkata"].waitForExistence(timeout: 5))
 
         let panel = app.dialogs.firstMatch

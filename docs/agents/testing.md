@@ -24,9 +24,11 @@ One XCUITest launches the built app with `TZ` pinned, clicks the status item, ad
 
 The run launches with `-zones none`, so the app ignores your saved Zones and starts empty (`defaults delete` is not needed and was unreliable from the test runner). The run still writes its Zone to the app's `com.vyavahareyash.Timezone` defaults, so it backs them up before the run and restores the backup in tearDown. If a run is killed mid-way, the backup is in the temporary directory as `PanelSmokeTests-defaults.plist`.
 
+- On a laptop display the status item can be hidden in the menu bar overflow (notch or crowded bar). It is not hittable (the test sees it at an odd frame) and the overflow control isn't in the accessibility tree, so the smoke test skips instead of failing. Make room in the menu bar (quit other menu bar apps) and rerun; a skip is not a code failure.
 - The panel appears as a `Dialog` in the accessibility tree, not a window.
 - `XCUIElement.screenshot()` fails for a panel on a non-main display, so the test crops it from its whole screen.
 - Static texts expose `value`, not `label`. Don't compare the time against Now (the minute can tick between reads); compare it with the moved time.
+- Any accessibility element overlapping the Cursor handle (a label, a per-cell view) makes the click on it miss, and the failed `XCTAssert` is soft, so the test fails later at "Back to Now". Mark decoration `.accessibilityHidden(true)`.
 - `click()` on a focusable element in the panel works, and `typeText` on a clicked TextField works (the add-Zone search, #11). `press(forDuration:thenDragTo:)` does not move the Cursor, and `typeKey` or a click at an offset from the element closes the panel.
 - Clearing saved defaults from the test runner (`defaults delete` via `Process`) did not reliably change what the app reads. Override the value with a launch argument instead, as the add-Zone test does with `app.launchArguments = ["-zones", "none"]`.
 - `scripts/dev test-all` exports screenshots to `build/screenshots/` (the panel is `panel_*.png`; `manifest.json` maps names).
