@@ -107,14 +107,10 @@ struct HourStrip: View {
     let row: ZoneRow
 
     private static let cellHeight: CGFloat = 20
-    /// Room above the strip: only the Home row labels Now, so the labels don't repeat.
-    private static let nowLabelRoom: CGFloat = 26
-    private static let plainRoom: CGFloat = 8
 
     private var timeline: DateInterval { model.timeline }
     private var cursor: Date { model.cursor }
     private var now: Date { model.now }
-    private var showsNowLabel: Bool { row.isHome }
     private var isFollowingNow: Bool { model.isFollowingNow }
     private func onNudge(_ steps: Int) { model.nudgeCursor(steps: steps) }
 
@@ -132,12 +128,6 @@ struct HourStrip: View {
                     .frame(width: 1, height: Self.cellHeight)
                     .offset(x: x(now))
                     .allowsHitTesting(false)
-                if showsNowLabel {
-                    Text("Now").font(.caption2).foregroundStyle(.red)
-                        .offset(x: x(now) + 2, y: -22)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
                 Rectangle()
                     .fill(.tint)
                     .frame(width: 2, height: Self.cellHeight)
@@ -163,7 +153,7 @@ struct HourStrip: View {
             })
         }
         .frame(height: 28)
-        .padding(.top, showsNowLabel ? Self.nowLabelRoom : Self.plainRoom)
+        .padding(.top, 8) // room for the Cursor handle
     }
 
     private func hourCell(_ cell: HourCell) -> some View {
