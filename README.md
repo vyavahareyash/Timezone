@@ -34,10 +34,12 @@ The Cursor snaps to 15-minute steps and stays within today. Reopening the panel 
 2. Type a city. Search works offline and matches by name, ignoring accents, for example "Pune", "San Francisco" or "Zürich".
 3. Click a result. The new Zone is labelled with the city name.
 
+The city list comes from GeoNames (CC BY 4.0); its credit is shown under the search results.
+
 ### Managing Zones
 
 - **Rename or remove:** right-click a Zone's row, then choose **Rename** or **Remove**. Rename opens an editable label; press Return or click away to save it.
-- **Reorder:** drag a Zone's row up or down. The Home zone stays first.
+- **Reorder:** drag a Zone's row up or down. The other Zones slide aside to show where it will land, and the row stops at the top and bottom of the list. The Home zone stays first.
 - You can add the same time zone more than once under different labels, for example "Client" and "Sales".
 - Your Zones are saved automatically and restored on the next launch.
 - With more than about eight Zones, the list scrolls.
@@ -45,7 +47,6 @@ The Cursor snaps to 15-minute steps and stays within today. Reopening the panel 
 ### The ⋯ menu
 
 - **Launch at login:** starts Timezone when you log in. The first time you turn it on, macOS may ask you to allow it in System Settings > Login Items; the toggle opens that pane for you.
-- **City data: GeoNames (CC BY 4.0):** opens the data source.
 - **Quit:** closes the app.
 
 ### Limits
