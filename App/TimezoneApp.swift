@@ -52,16 +52,25 @@ struct PanelView: View {
                 .accessibilityLabel("More")
             }
             ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
-                HStack {
-                    Text(row.label)
-                    Spacer()
-                    // Text formats with the environment's time zone and locale (12/24-hour), not the style's own.
-                    Text(row.time, format: Date.FormatStyle(date: .omitted, time: .shortened))
-                        .environment(\.timeZone, row.timeZone)
-                        .font(.title2.monospacedDigit())
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(row.label)
+                        Spacer()
+                        if row.dayOffset != 0 {
+                            Text(row.dayOffset, format: .number.sign(strategy: .always()))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Text(row.abbreviation).font(.caption).foregroundStyle(.secondary)
+                        // Text formats with the environment's time zone and locale (12/24-hour), not the style's own.
+                        Text(row.time, format: Date.FormatStyle(date: .omitted, time: .shortened))
+                            .environment(\.timeZone, row.timeZone)
+                            .font(.title2.monospacedDigit())
+                    }
+                    HourStrip(model: model, row: row)
                 }
-                HourStrip(timeline: model.timeline, cells: row.cells, now: model.now, cursor: model.cursor,
-                          onMove: model.moveCursor(to:), onNudge: model.nudgeCursor(steps:))
+                .padding(.horizontal, 6)
+                .background(row.isHome ? Color.accentColor.opacity(0.1) : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 6))
             }
             if model.zones.isEmpty && !isAdding {
                 Text("Add a zone with the + button").foregroundStyle(.secondary)
@@ -92,36 +101,40 @@ struct PanelView: View {
     }
 }
 
-/// A Row's hour cells laid out against the Timeline, with Now marked below and the Cursor through it.
+/// A Row's hour cells laid out against the Timeline, with Now as a red line through every strip and the Cursor through it.
 struct HourStrip: View {
-    let timeline: DateInterval
-    let cells: [DateInterval]
-    let now: Date
-    let cursor: Date
-    let onMove: (Date) -> Void
-    let onNudge: (Int) -> Void
+    let model: PanelModel
+    let row: ZoneRow
+
+    private static let cellHeight: CGFloat = 20
+
+    private var timeline: DateInterval { model.timeline }
+    private var cursor: Date { model.cursor }
+    private var now: Date { model.now }
+    private var isFollowingNow: Bool { model.isFollowingNow }
+    private func onNudge(_ steps: Int) { model.nudgeCursor(steps: steps) }
 
     var body: some View {
         GeometryReader { geometry in
             let x = { (date: Date) in geometry.size.width * date.timeIntervalSince(timeline.start) / timeline.duration }
             ZStack(alignment: .topLeading) {
-                ForEach(cells, id: \.start) { cell in
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(.quaternary)
-                        .frame(width: max(x(cell.end) - x(cell.start) - 1, 0), height: 20)
-                        .offset(x: x(cell.start))
+                ForEach(row.cells, id: \.interval.start) { cell in
+                    hourCell(cell)
+                        .frame(width: max(x(cell.interval.end) - x(cell.interval.start) - 1, 0), height: Self.cellHeight)
+                        .offset(x: x(cell.interval.start))
                 }
-                Circle()
+                Rectangle()
                     .fill(.red)
-                    .frame(width: 6, height: 6)
-                    .offset(x: x(now) - 3, y: 22)
+                    .frame(width: 1, height: Self.cellHeight)
+                    .offset(x: x(now))
+                    .allowsHitTesting(false)
                 Rectangle()
                     .fill(.tint)
-                    .frame(width: 2, height: 20)
+                    .frame(width: 2, height: Self.cellHeight)
                     .offset(x: x(cursor) - 1)
                 // The Cursor handle: dragging it is the strip's own drag below, which it sits inside.
                 Circle()
-                    .fill(.tint)
+                    .fill(isFollowingNow ? AnyShapeStyle(.red) : AnyShapeStyle(.tint)) // red: it sits on the Now line
                     .frame(width: 10, height: 10)
                     .padding(3)
                     .contentShape(Rectangle())
@@ -136,10 +149,26 @@ struct HourStrip: View {
             .contentShape(Rectangle())
             // Pressing anywhere jumps the Cursor there; holding and dragging scrubs.
             .gesture(DragGesture(minimumDistance: 0).onChanged { value in
-                onMove(timeline.start + value.location.x / geometry.size.width * timeline.duration)
+                model.moveCursor(to: timeline.start + value.location.x / geometry.size.width * timeline.duration)
             })
         }
         .frame(height: 28)
-        .padding(.top, 8)
+        .padding(.top, 8) // room for the Cursor handle
+    }
+
+    private func hourCell(_ cell: HourCell) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 2).fill(.quaternary)
+            if cell.containsCursor {
+                RoundedRectangle(cornerRadius: 2).stroke(.tint, lineWidth: 1.5)
+            }
+            if cell.showsHour {
+                Text("\(cell.hour)")
+                    .font(.system(size: 8, weight: cell.containsCursor ? .bold : .regular).monospacedDigit())
+                    .fixedSize() // a cell is narrower than two digits: don't let them wrap
+            }
+        }
+        // Decoration: elements overlapping the Cursor handle make the UI test's click on it miss.
+        .accessibilityHidden(true)
     }
 }

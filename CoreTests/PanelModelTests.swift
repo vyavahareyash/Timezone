@@ -28,9 +28,9 @@ struct PanelModelTests {
         #expect(model.timeline == DateInterval(start: utc(start), end: utc(end)))
         let cells = model.homeRow.cells
         #expect(cells.count == hours)
-        #expect(cells.first?.start == utc(start))
-        #expect(cells.last?.end == utc(end))
-        #expect(cells.allSatisfy { $0.duration == 3600 })
+        #expect(cells.first?.interval.start == utc(start))
+        #expect(cells.last?.interval.end == utc(end))
+        #expect(cells.allSatisfy { $0.interval.duration == 3600 })
     }
 
     @Test func openingPlacesTheCursorAtNowFollowingNow() {
@@ -129,6 +129,94 @@ struct PanelModelTests {
 
         #expect(model.homeRow.label == "Kolkata")
         #expect(model.timeline == DateInterval(start: utc("2026-09-20T18:30:00Z"), end: utc("2026-09-21T18:30:00Z")))
+    }
+}
+
+struct ZoneStripTests {
+    /// A model whose saved Zones are `zones` (label, IANA identifier), Home being Berlin.
+    private func makeModel(now: String, zones: [(String, String)] = []) -> PanelModel {
+        let json = try! JSONEncoder().encode(zones.map { ["label": $0.0, "timeZoneIdentifier": $0.1] })
+        return PanelModel(clock: { utc(now) }, systemTimeZone: { berlin }, locale: Locale(identifier: "en_GB"),
+                          loadZones: { json })
+    }
+
+    @Test func homeCellsAreWholeHoursFromMidnightAndHomeIsMarked() {
+        let model = makeModel(now: "2026-09-21T14:13:20Z", zones: [("Pune", "Asia/Kolkata")])
+
+        #expect(model.rows.map(\.isHome) == [true, false])
+        #expect(model.rows[0].cells.map(\.hour) == Array(0..<24))
+        #expect(model.rows[0].cells.allSatisfy { $0.isWhole })
+    }
+
+    @Test func halfHourZoneCutsItsCellsOnItsOwnHoursWithPartialEnds() {
+        let model = makeModel(now: "2026-09-21T14:13:20Z", zones: [("Pune", "Asia/Kolkata")])
+        let cells = model.rows[1].cells
+
+        // Pune's hours start on the half hour of Home's: a half-hour stub, then whole hours.
+        #expect(cells.first?.interval == DateInterval(start: utc("2026-09-20T22:00:00Z"), end: utc("2026-09-20T22:30:00Z")))
+        #expect(cells.first?.isWhole == false)
+        #expect(cells[1].interval == DateInterval(start: utc("2026-09-20T22:30:00Z"), end: utc("2026-09-20T23:30:00Z")))
+        #expect(cells[1].hour == 4)
+        #expect(cells[1].isWhole)
+        #expect(cells.last?.interval.end == utc("2026-09-21T22:00:00Z"))
+        #expect(cells.last?.isWhole == false)
+    }
+
+    @Test func quarterHourZoneCellsAreShiftedByFortyFiveMinutes() {
+        let model = makeModel(now: "2026-09-21T14:13:20Z", zones: [("Kathmandu", "Asia/Kathmandu")])
+        let cells = model.rows[1].cells
+
+        // Kathmandu's hours start at 04:00 local = 22:15 UTC: a quarter-hour stub, then whole hours.
+        #expect(cells.first?.interval == DateInterval(start: utc("2026-09-20T22:00:00Z"), end: utc("2026-09-20T22:15:00Z")))
+        #expect(cells.first?.isWhole == false)
+        #expect(cells[1].interval.start == utc("2026-09-20T22:15:00Z"))
+        #expect(cells[1].hour == 4)
+        #expect(cells[2].hour == 5)
+    }
+
+    @Test func dayOffsetIsTheZonesDateAtTheCursorRelativeToHome() {
+        let model = makeModel(now: "2026-09-21T14:13:20Z",
+                              zones: [("Auckland", "Pacific/Auckland"), ("Los Angeles", "America/Los_Angeles")])
+
+        model.moveCursor(to: utc("2026-09-21T16:00:00Z")) // Berlin 18:00, Auckland 04:00 the 22nd, LA 09:00 the 21st
+        #expect(model.rows.map(\.dayOffset) == [0, 1, 0])
+
+        model.moveCursor(to: utc("2026-09-21T06:00:00Z")) // Berlin 08:00, Auckland 18:00 the 21st, LA 23:00 the 20th
+        #expect(model.rows.map(\.dayOffset) == [0, 0, -1])
+    }
+
+    @Test func hoursAreShownEveryThreeAndOnTheCursorCellNeverOnStubs() {
+        let model = makeModel(now: "2026-09-21T14:13:20Z", zones: [("Pune", "Asia/Kolkata")])
+        model.moveCursor(to: utc("2026-09-21T14:00:00Z")) // Berlin 16:00, Pune 19:30
+
+        let home = model.rows[0].cells
+        #expect(home.filter(\.containsCursor).map(\.hour) == [16])
+        #expect(home.filter(\.showsHour).map(\.hour) == [0, 3, 6, 9, 12, 15, 16, 18, 21])
+
+        let pune = model.rows[1].cells
+        #expect(pune.filter(\.containsCursor).map(\.hour) == [19]) // not a multiple of 3, shown anyway
+        #expect(pune.first?.showsHour == false) // the stub at 0:00 Berlin
+        #expect(pune.last?.showsHour == false)
+    }
+
+    @Test func cellHoursFollowALocalDSTChange() {
+        // Los Angeles falls back on 2026-11-01 while Home (Berlin) has a plain 24-hour day.
+        let model = makeModel(now: "2026-11-01T12:00:00Z", zones: [("Los Angeles", "America/Los_Angeles")])
+        let hours = model.rows[1].cells.map(\.hour)
+
+        // Berlin midnight is 16:00 PDT the day before; LA's clock then repeats 01:00 (PDT, then PST).
+        #expect(hours.first == 16)
+        #expect(hours.filter { $0 == 1 }.count == 2)
+        #expect(model.rows[1].cells.allSatisfy { $0.isWhole })
+    }
+
+    @Test func abbreviationIsTheZonesAtTheCursorAndFlipsAcrossADSTChange() {
+        let model = makeModel(now: "2026-03-29T12:00:00Z", zones: [("Pune", "Asia/Kolkata")])
+        // en_GB has no short name for Kolkata, so it falls back to the GMT offset.
+        #expect(model.rows.map(\.abbreviation) == ["CEST", "GMT+5:30"])
+
+        model.moveCursor(to: utc("2026-03-29T00:30:00Z")) // Berlin's spring-forward is at 01:00 UTC
+        #expect(model.rows.map(\.abbreviation) == ["CET", "GMT+5:30"])
     }
 }
 

@@ -7,7 +7,25 @@ public struct ZoneRow {
     public let timeZone: TimeZone
     public let time: Date
     /// The hour cells of its strip, spanning the Timeline.
-    public let cells: [DateInterval]
+    public let cells: [HourCell]
+    public let isHome: Bool
+    /// The Zone's date at the Cursor minus the Home zone's: -1, 0 or +1.
+    public let dayOffset: Int
+    /// The Zone's abbreviation at the Cursor, e.g. CET or IST.
+    public let abbreviation: String
+}
+
+/// The part of a Zone's strip within one of its local hours.
+public struct HourCell {
+    public let interval: DateInterval
+    /// The Zone's local hour at the cell's start.
+    public let hour: Int
+    /// False for a stub at either end of the Timeline, where the Zone's hours don't line up with Home's.
+    public let isWhole: Bool
+    /// The Cursor falls within this cell.
+    public let containsCursor: Bool
+    /// Whether the strip prints `hour` here: every 3 local hours and under the Cursor, never on a stub.
+    public var showsHour: Bool { isWhole && (hour % 3 == 0 || containsCursor) }
 }
 
 /// Everything the panel shows; views only render it.
@@ -15,6 +33,7 @@ public struct ZoneRow {
     private let clock: () -> Date
     private let systemTimeZone: () -> TimeZone
     private let cities: CityIndex
+    private let locale: Locale
     private let saveZones: (Data) -> Void
 
     private var homeZone: TimeZone
@@ -33,12 +52,13 @@ public struct ZoneRow {
 
     public init(
         clock: @escaping () -> Date, systemTimeZone: @escaping () -> TimeZone,
-        cities: CityIndex = CityIndex(tsv: ""),
+        cities: CityIndex = CityIndex(tsv: ""), locale: Locale = .current,
         loadZones: () -> Data? = { nil }, saveZones: @escaping (Data) -> Void = { _ in }
     ) {
         self.clock = clock
         self.systemTimeZone = systemTimeZone
         self.cities = cities
+        self.locale = locale
         self.saveZones = saveZones
         zones = loadZones().flatMap { try? JSONDecoder().decode([AddedZone].self, from: $0) } ?? []
         homeZone = systemTimeZone()
@@ -84,31 +104,64 @@ public struct ZoneRow {
 
     /// Today in the Home zone, midnight to midnight: 23, 24 or 25 hours.
     public var timeline: DateInterval {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = homeZone
-        return calendar.dateInterval(of: .day, for: now)!
+        calendar(in: homeZone).dateInterval(of: .day, for: now)!
     }
 
     public var homeRow: ZoneRow {
         let zone = homeZone
         // "America/Argentina/Buenos_Aires" -> "Buenos Aires"
         let label = zone.identifier.split(separator: "/").last.map(String.init) ?? zone.identifier
-        return row(label: label.replacingOccurrences(of: "_", with: " "), timeZone: zone)
+        return row(label: label.replacingOccurrences(of: "_", with: " "), timeZone: zone, isHome: true)
     }
 
     /// The Home zone first, then the added Zones in the order they were added.
     public var rows: [ZoneRow] {
         [homeRow] + zones.compactMap { zone in
-            TimeZone(identifier: zone.timeZoneIdentifier).map { row(label: zone.label, timeZone: $0) }
+            TimeZone(identifier: zone.timeZoneIdentifier).map { row(label: zone.label, timeZone: $0, isHome: false) }
         }
     }
 
-    private func row(label: String, timeZone: TimeZone) -> ZoneRow {
+    private func row(label: String, timeZone: TimeZone, isHome: Bool) -> ZoneRow {
+        ZoneRow(label: label, timeZone: timeZone, time: cursor, cells: cells(in: timeZone), isHome: isHome,
+                dayOffset: dayNumber(cursor, in: timeZone) - dayNumber(cursor, in: homeZone),
+                abbreviation: abbreviation(of: timeZone, at: cursor))
+    }
+
+    private func calendar(in zone: TimeZone) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        return calendar
+    }
+
+    /// The Timeline cut on `zone`'s own local hours.
+    private func cells(in zone: TimeZone) -> [HourCell] {
         let timeline = timeline
-        let cells = stride(from: timeline.start, to: timeline.end, by: 3600).map {
-            DateInterval(start: $0, end: min($0 + 3600, timeline.end))
+        let local = calendar(in: zone)
+        var cells: [HourCell] = []
+        var start = timeline.start
+        while start < timeline.end {
+            let hour = local.dateInterval(of: .hour, for: start)!
+            let end = min(hour.end, timeline.end)
+            cells.append(HourCell(interval: DateInterval(start: start, end: end),
+                                  hour: local.component(.hour, from: start),
+                                  isWhole: start == hour.start && end == hour.end,
+                                  containsCursor: start <= cursor && cursor < end))
+            start = end
         }
-        return ZoneRow(label: label, timeZone: timeZone, time: cursor, cells: cells)
+        return cells
+    }
+
+    /// The short name in `locale` (CET, IST), falling back to Foundation's GMT offset where the locale has none.
+    private func abbreviation(of timeZone: TimeZone, at date: Date) -> String {
+        let style: NSTimeZone.NameStyle = timeZone.isDaylightSavingTime(for: date) ? .shortDaylightSaving : .shortStandard
+        return timeZone.localizedName(for: style, locale: locale) ?? timeZone.abbreviation(for: date) ?? ""
+    }
+
+    /// The local calendar day of `date` in `zone`, counted in days since 1970 (as a UTC day).
+    private func dayNumber(_ date: Date, in zone: TimeZone) -> Int {
+        let components = calendar(in: zone).dateComponents([.year, .month, .day], from: date)
+        let day = calendar(in: TimeZone(identifier: "UTC")!).date(from: components)!
+        return Int(day.timeIntervalSince1970 / 86_400)
     }
 
     /// Cities matching `query`, for choosing a Zone to add.
