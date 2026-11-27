@@ -39,13 +39,20 @@ struct PanelSnapshotTests {
         try assertSnapshot("zone-added", zone: "Europe/Berlin", locale: "en_GB", addingCities: ["Pune", "San Francisco"])
     }
 
+    @Test func severalZonesWithMovedCursorShowShiftedStripsAndDayOffsets() throws {
+        // 19:13 in Berlin: Pune is on the half hour, Kathmandu on the quarter, Auckland is the next day.
+        try assertSnapshot("zones-moved", zone: "Europe/Berlin", locale: "en_GB", movedCursorTo: Self.now + 3 * 3600,
+                           addingCities: ["Pune", "Kathmandu", "San Francisco", "Auckland"])
+    }
+
     private func assertSnapshot(
         _ name: String, zone: String, locale: String, colorScheme: ColorScheme = .light, at instant: Date = now,
         movedCursorTo cursor: Date? = nil, searching query: String? = nil, addingCities: [String] = [],
         filePath: String = #filePath
     ) throws {
         let cities = CityIndex.bundled()
-        let model = PanelModel(clock: { instant }, systemTimeZone: { TimeZone(identifier: zone)! }, cities: cities)
+        let model = PanelModel(clock: { instant }, systemTimeZone: { TimeZone(identifier: zone)! }, cities: cities,
+                               locale: Locale(identifier: locale))
         for name in addingCities { model.addZone(try #require(cities.search(name).first)) }
         if let cursor { model.moveCursor(to: cursor) }
         let view = PanelView(model: model, opensAtNow: cursor == nil, query: query)
