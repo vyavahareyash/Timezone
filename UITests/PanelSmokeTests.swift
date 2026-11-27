@@ -17,7 +17,8 @@ private func runDefaults(_ arguments: [String]) -> Int32 {
 /// Drives the real app through the menu bar. The panel screenshot lands in the .xcresult bundle.
 @MainActor
 final class PanelSmokeTests: XCTestCase {
-    private var hadDefaults = false
+    // setUp/tearDown are nonisolated on the Xcode 26 SDK, so the flag can't be main-actor state (Swift 6 error there).
+    private nonisolated(unsafe) var hadDefaults = false
 
     override func setUp() {
         super.setUp()
