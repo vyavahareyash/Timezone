@@ -28,6 +28,18 @@ public struct HourCell {
     public let containsCursor: Bool
     /// Whether the strip prints `hour` here: every 3 local hours and under the Cursor, never on a stub.
     public var showsHour: Bool { isWhole && (hour % 3 == 0 || containsCursor) }
+
+    /// The part of the day this cell's local hour falls in; the strip shades by it.
+    public enum Band { case working, evening, night }
+
+    /// Working 09:00–18:00, evening 18:00–22:00, night the rest, by the Zone's own local hour.
+    public var band: Band {
+        switch hour {
+        case 9..<18: .working
+        case 18..<22: .evening
+        default: .night
+        }
+    }
 }
 
 /// Everything the panel shows; views only render it.

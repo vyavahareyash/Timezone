@@ -65,6 +65,16 @@ struct PanelSnapshotTests {
                                           "Mumbai", "Delhi", "Bengaluru"])
     }
 
+    @Test func zonesAreShadedByWorkingEveningAndNightHours() throws {
+        try assertSnapshot("zones-banded", zone: "Europe/Berlin", locale: "en_GB",
+                           addingCities: ["Pune", "San Francisco", "Auckland"])
+    }
+
+    @Test func zoneShadingStaysVisibleInDarkMode() throws {
+        try assertSnapshot("zones-banded-dark", zone: "Europe/Berlin", locale: "en_GB", colorScheme: .dark,
+                           addingCities: ["Pune", "San Francisco", "Auckland"])
+    }
+
     private func assertSnapshot(
         _ name: String, zone: String, locale: String, colorScheme: ColorScheme = .light, at instant: Date = now,
         movedCursorTo cursor: Date? = nil, searching query: String? = nil, addingCities: [String] = [],

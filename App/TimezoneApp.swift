@@ -234,9 +234,18 @@ struct HourStrip: View {
         .padding(.top, 8) // room for the Cursor handle
     }
 
+    /// Working strongest, night faintest; primary-based so each appearance keeps the lightness gap.
+    private static func fill(_ band: HourCell.Band) -> Color {
+        switch band {
+        case .working: .primary.opacity(0.25)
+        case .evening: .primary.opacity(0.15)
+        case .night: .primary.opacity(0.06)
+        }
+    }
+
     private func hourCell(_ cell: HourCell) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 2).fill(.quaternary)
+            RoundedRectangle(cornerRadius: 2).fill(Self.fill(cell.band))
             if cell.containsCursor {
                 RoundedRectangle(cornerRadius: 2).stroke(.tint, lineWidth: 1.5)
             }
