@@ -20,7 +20,9 @@ Render `PanelView` with a fixed clock, time zone, locale and color scheme to `Ap
 
 ## `UITests/`: real-app smoke test
 
-One XCUITest launches the built app with `TZ` pinned, clicks the status item, attaches a `panel` screenshot, and quits via ⋯. It takes over the mouse for ~10 s, so the fast loop and the pre-push hook skip it.
+One XCUITest launches the built app with `TZ` pinned, clicks the status item, adds a Zone (Paris) through + and the search field, attaches a `panel` screenshot, and quits via ⋯. It takes over the mouse for ~10 s, so the fast loop and the pre-push hook skip it.
+
+The run launches with `-zones none`, so the app ignores your saved Zones and starts empty (`defaults delete` is not needed and was unreliable from the test runner). The run still writes its Zone to the app's `com.vyavahareyash.Timezone` defaults, so it backs them up before the run and restores the backup in tearDown. If a run is killed mid-way, the backup is in the temporary directory as `PanelSmokeTests-defaults.plist`.
 
 - The panel appears as a `Dialog` in the accessibility tree, not a window.
 - `XCUIElement.screenshot()` fails for a panel on a non-main display, so the test crops it from its whole screen.
