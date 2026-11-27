@@ -27,7 +27,10 @@ One XCUITest launches the built app with `TZ` pinned, clicks the status item, at
 - Static texts expose `value`, not `label`. Don't compare the time against Now (the minute can tick between reads); compare it with the moved time.
 - `click()` on a focusable element in the panel works. `press(forDuration:thenDragTo:)` does not move the Cursor, and `typeKey` or a click at an offset from the element closes the panel.
 - `scripts/dev test-all` exports screenshots to `build/screenshots/` (the panel is `panel_*.png`; `manifest.json` maps names).
+- The run's summary doesn't list UI tests. To see each test's result, read the bundle: `xcrun xcresulttool get test-results tests --path build/Tests.xcresult | grep -E '"(name|result)"'`.
 
 ## Build location
 
 Build products go to `~/Library/Developer/Xcode/DerivedData/Timezone-cli`, outside `~/Documents`: test apps are ad-hoc signed, so their identity changes every build and macOS would re-ask for Documents access each run, blocking the UI test.
+
+To reproduce a clean build, delete that directory first: `rm -rf ~/Library/Developer/Xcode/DerivedData/Timezone-cli`.
