@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="170" viewBox="0 0 880 170" role="img" aria-label="Three install steps. 1: drag Timezone from the disk image to Applications. 2: open it once; macOS says Timezone Not Opened; click Done. 3: in System Settings, Privacy and Security, click Open Anyway.">
+  <title>Install Timezone in three steps</title>
+  <style>
+    .chip { fill: #F2F3F5 } .card { fill: #FFFFFF } .edge { stroke: #E3E6EA } .ink { fill: #1D1D1F } .ink2 { fill: #86868B }
+    .bar { fill: #E3E6EA } .arrow { stroke: #86868B } .num { fill: #1D1D1F } .num-ink { fill: #FFFFFF }
+    @media (prefers-color-scheme: dark) {
+      .chip { fill: #1C2028 } .card { fill: #262A32 } .edge { stroke: #353A44 } .ink { fill: #F2F2F5 } .ink2 { fill: #9A9AA6 }
+      .bar { fill: #353A44 } .arrow { stroke: #9A9AA6 } .num { fill: #F2F2F5 } .num-ink { fill: #111114 }
+    }
+    text { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif }
+  </style>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B3366"/><stop offset="1" stop-color="#121633"/></linearGradient>
+    <linearGradient id="globe" x1="0" y1=".25" x2="1" y2=".75">
+      <stop offset="0" stop-color="#C4E2F8"/><stop offset=".36" stop-color="#A8D2F2"/><stop offset=".5" stop-color="#F3C08B"/>
+      <stop offset=".58" stop-color="#F2B072"/><stop offset=".68" stop-color="#7A5D92"/><stop offset=".84" stop-color="#28305A"/><stop offset="1" stop-color="#1A2048"/>
+    </linearGradient>
+    <linearGradient id="folder" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7CC0FA"/><stop offset="1" stop-color="#4E9EEA"/></linearGradient>
+    <!-- The app icon (App/AppIcon.icon), flattened -->
+    <symbol id="icon" viewBox="0 0 100 100">
+      <rect width="100" height="100" rx="22.5" fill="url(#tile)"/>
+      <circle cx="50" cy="50" r="31" fill="url(#globe)"/>
+      <g fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2" stroke-linecap="round">
+        <circle cx="50" cy="50" r="31"/><ellipse cx="50" cy="50" rx="13" ry="31"/>
+        <path d="M19 50h62M23.5 34.5c7.5 2.6 16.6 4 26.5 4s19-1.4 26.5-4M23.5 65.5c7.5-2.6 16.6-4 26.5-4s19 1.4 26.5 4"/>
+      </g>
+    </symbol>
+    <symbol id="num" viewBox="0 0 22 22"><circle class="num" cx="11" cy="11" r="11"/></symbol>
+  </defs>
+
+  <!-- 1 · Drag to Applications -->
+  <rect class="chip" x="0" y="0" width="280" height="170" rx="16"/>
+  <rect class="card edge" x="14" y="14" width="252" height="142" rx="12"/>
+  <circle cx="30" cy="29" r="4" fill="#FF5F57"/><circle cx="44" cy="29" r="4" fill="#FEBC2E"/><circle cx="58" cy="29" r="4" fill="#28C840"/>
+  <use href="#icon" x="58" y="62" width="48" height="48"/>
+  <path class="arrow" d="M122 86h36m-8-7 8 7-8 7" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M182 72a5 5 0 0 1 5-5h12a4 4 0 0 1 2.8 1.2L205 72h18a5 5 0 0 1 5 5v2h-46z" fill="#4A97E4"/>
+  <rect x="180" y="76" width="50" height="35" rx="5" fill="url(#folder)"/>
+  <text class="ink2" x="82" y="132" font-size="11" text-anchor="middle">Timezone</text>
+  <text class="ink2" x="205" y="132" font-size="11" text-anchor="middle">Applications</text>
+  <use href="#num" x="244" y="22" width="16" height="16"/><text class="num-ink" x="252" y="34" font-size="11" font-weight="700" text-anchor="middle">1</text>
+
+  <!-- 2 · Click Done -->
+  <rect class="chip" x="300" y="0" width="280" height="170" rx="16"/>
+  <rect class="card edge" x="314" y="14" width="252" height="142" rx="14"/>
+  <use href="#icon" x="422" y="26" width="36" height="36"/>
+  <text class="ink" x="440" y="80" font-size="12" font-weight="600" text-anchor="middle">“Timezone” Not Opened</text>
+  <text class="ink2" x="440" y="96" font-size="9.5" text-anchor="middle">Apple could not verify it is free of malware.</text>
+  <rect x="340" y="110" width="92" height="26" rx="7" fill="#0A84FF"/>
+  <text x="386" y="127" font-size="11.5" font-weight="600" text-anchor="middle" fill="#FFFFFF">Done</text>
+  <rect class="chip" x="448" y="110" width="92" height="26" rx="7"/>
+  <text class="ink" x="494" y="127" font-size="11" text-anchor="middle">Move to Trash</text>
+  <use href="#num" x="544" y="22" width="16" height="16"/><text class="num-ink" x="552" y="34" font-size="11" font-weight="700" text-anchor="middle">2</text>
+
+  <!-- 3 · Open Anyway -->
+  <rect class="chip" x="600" y="0" width="280" height="170" rx="16"/>
+  <rect class="card edge" x="614" y="14" width="252" height="142" rx="12"/>
+  <rect class="chip" x="615" y="15" width="74" height="140" rx="11"/>
+  <rect class="bar" x="624" y="38" width="56" height="7" rx="3.5"/><rect class="bar" x="624" y="54" width="48" height="7" rx="3.5"/>
+  <rect x="620" y="67" width="64" height="16" rx="5" fill="#0A84FF"/><rect x="626" y="72" width="44" height="6" rx="3" fill="#FFFFFF" fill-opacity=".9"/>
+  <rect class="bar" x="624" y="92" width="52" height="7" rx="3.5"/>
+  <text class="ink" x="700" y="40" font-size="12" font-weight="600">Privacy &amp; Security</text>
+  <text class="ink2" x="700" y="64" font-size="9.5">Security</text>
+  <text class="ink" x="700" y="84" font-size="10">“Timezone” was blocked to</text>
+  <text class="ink" x="700" y="98" font-size="10">protect your Mac.</text>
+  <rect class="card" x="768" y="112" width="88" height="26" rx="7" stroke="#0A84FF" stroke-width="2"/>
+  <text class="ink" x="812" y="129" font-size="11" font-weight="600" text-anchor="middle">Open Anyway</text>
+  <use href="#num" x="840" y="22" width="16" height="16"/><text class="num-ink" x="848" y="34" font-size="11" font-weight="700" text-anchor="middle">3</text>
+</svg>

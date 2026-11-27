@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400">
+  <!-- The DMG window's background: a pale dawn, and the drag path from the app (180, 192) to Applications (484, 192).
+       Finder draws both icons and their labels; scripts/release/background.swift adds the text. -->
+  <defs>
+    <linearGradient id="dawn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EEF4FB"/><stop offset=".62" stop-color="#F5F2F7"/><stop offset="1" stop-color="#FBE8D8"/>
+    </linearGradient>
+    <radialGradient id="sun" cx=".5" cy="1.05" r=".55">
+      <stop offset="0" stop-color="#F3C08B" stop-opacity=".55"/><stop offset="1" stop-color="#F3C08B" stop-opacity="0"/>
+    </radialGradient>
+    <!-- The sky from 03:00 to 11:00 (App/TimezoneApp.swift skyLight keyframes): night, dawn, full day. -->
+    <linearGradient id="sky">
+      <stop offset="0" stop-color="#28305A"/><stop offset=".25" stop-color="#28305A"/><stop offset=".4125" stop-color="#B98AA6"/>
+      <stop offset=".55" stop-color="#F3C08B"/><stop offset=".8125" stop-color="#A8D2F2"/><stop offset="1" stop-color="#A8D2F2"/>
+    </linearGradient>
+  </defs>
+  <rect width="660" height="400" fill="url(#dawn)"/>
+  <rect width="660" height="400" fill="url(#sun)"/>
+  <rect x="258" y="186" width="148" height="12" rx="6" fill="url(#sky)"/>
+  <path d="M414 183.5l9 8.5-9 8.5" fill="none" stroke="#7FA6CF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- The Cursor's bead riding the path -->
+  <rect x="363.5" y="185.5" width="9" height="13" rx="4.5" fill="#000000" fill-opacity=".12"/>
+  <rect x="364" y="186" width="8" height="12" rx="4" fill="#FFFFFF"/>
+  <rect x="366.75" y="188.5" width="2.5" height="7" rx="1.25" fill="#000000" fill-opacity=".55"/>
+  <line x1="150" y1="318" x2="510" y2="318" stroke="#1D1D1F" stroke-opacity=".08"/>
+</svg>

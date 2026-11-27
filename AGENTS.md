@@ -16,7 +16,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 One-time: `brew install xcodegen` and `git config core.hooksPath .githooks` (pre-push runs the fast tests). The `.xcodeproj` is generated and git-ignored; `scripts/dev` regenerates it every run.
 
-`scripts/dev test` is the fast loop (core + snapshots), `scripts/dev test-all` adds the UI smoke test (takes over the mouse ~10 s) and exports its screenshots to `build/screenshots/`, `scripts/dev run` builds and opens the app. Output is filtered to results and real errors; rerun with `VERBOSE=1` if it looks wrong.
+`scripts/dev test` is the fast loop (core + snapshots), `scripts/dev test-all` adds the UI smoke test (takes over the mouse ~10 s) and exports its screenshots to `build/screenshots/`, `scripts/dev run` builds and opens the app, `scripts/dev dmg` builds the release DMG into `build/` (needs `brew install create-dmg`). Pushing a `v*` tag runs `.github/workflows/release.yml`: GitHub release plus the Homebrew cask in `vyavahareyash/homebrew-tap`. README art: `python3 scripts/hero.py` regenerates `.github/hero.svg`; the other `.github/*.svg` are hand-written. Output is filtered to results and real errors; rerun with `VERBOSE=1` if it looks wrong.
 
 Layout: `Core/` is the pure `TimezoneCore` framework (Foundation only), `App/` the SwiftUI menu bar app; tests in `CoreTests/` (behaviour), `AppTests/` (panel snapshots), `UITests/` (real-app smoke test).
 
