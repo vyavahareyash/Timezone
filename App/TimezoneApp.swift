@@ -1,3 +1,4 @@
+import ServiceManagement
 import SwiftUI
 import TimezoneCore
 
@@ -129,6 +130,18 @@ struct PanelView: View {
                 }
                 Spacer()
                 Menu {
+                    // Read live: the menu re-renders on each model tick, so it shows the registration as it is now.
+                    Toggle("Launch at login", isOn: Binding(
+                        get: { SMAppService.mainApp.status == .enabled },
+                        set: { on in
+                            // Awaiting the user's approval in System Settings: register() would do nothing, so open the pane.
+                            if on && SMAppService.mainApp.status == .requiresApproval {
+                                SMAppService.openSystemSettingsLoginItems()
+                                return
+                            }
+                            do { try on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
+                            catch { NSLog("Launch at login: %@", error.localizedDescription) }
+                        }))
                     Link("City data: GeoNames (CC BY 4.0)", destination: URL(string: "https://www.geonames.org")!)
                     Button("Quit") { NSApplication.shared.terminate(nil) }
                 } label: {
