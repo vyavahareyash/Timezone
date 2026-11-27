@@ -183,8 +183,9 @@ struct PanelView: View {
 struct HourStrip: View {
     let model: PanelModel
     let row: ZoneRow
+    @Environment(\.colorScheme) private var colorScheme
 
-    private static let cellHeight: CGFloat = 20
+    private static let cellHeight: CGFloat = 26 // the mock-up's cell height
 
     private var timeline: DateInterval { model.timeline }
     private var cursor: Date { model.cursor }
@@ -234,28 +235,37 @@ struct HourStrip: View {
         .padding(.top, 8) // room for the Cursor handle
     }
 
-    /// Working strongest, night faintest; primary-based so each appearance keeps the lightness gap.
-    private static func fill(_ band: HourCell.Band) -> Color {
+    /// The mock-up's band colours, cell fill and hour number, for each appearance.
+    private func bandColors(_ band: HourCell.Band) -> (fill: Color, text: Color) {
+        let dark = colorScheme == .dark
         switch band {
-        case .working: .primary.opacity(0.25)
-        case .evening: .primary.opacity(0.15)
-        case .night: .primary.opacity(0.06)
+        case .working: return dark ? (Color(hex: 0xD3AE55), Color(hex: 0x241B04)) : (Color(hex: 0xF8DB96), Color(hex: 0x4A3A10))
+        case .evening: return dark ? (Color(hex: 0x4E5566), Color(hex: 0xE2E5EC)) : (Color(hex: 0xD3D8E1), Color(hex: 0x2B3140))
+        case .night: return dark ? (Color(hex: 0x33384A), Color(hex: 0xB4BAC8)) : (Color(hex: 0xA9B0BF), Color(hex: 0x1F2430))
         }
     }
 
     private func hourCell(_ cell: HourCell) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 2).fill(Self.fill(cell.band))
+            RoundedRectangle(cornerRadius: 2).fill(bandColors(cell.band).fill)
             if cell.containsCursor {
                 RoundedRectangle(cornerRadius: 2).stroke(.tint, lineWidth: 1.5)
             }
             if cell.showsHour {
                 Text("\(cell.hour)")
-                    .font(.system(size: 8, weight: cell.containsCursor ? .bold : .regular).monospacedDigit())
+                    .font(.system(size: 10, weight: cell.containsCursor ? .heavy : .medium).monospacedDigit())
+                    .foregroundStyle(bandColors(cell.band).text)
                     .fixedSize() // a cell is narrower than two digits: don't let them wrap
             }
         }
         // Decoration: elements overlapping the Cursor handle make the UI test's click on it miss.
         .accessibilityHidden(true)
+    }
+}
+
+private extension Color {
+    /// A colour from a 0xRRGGBB value, as written in the mock-up.
+    init(hex: UInt32) {
+        self.init(red: Double(hex >> 16 & 0xFF) / 255, green: Double(hex >> 8 & 0xFF) / 255, blue: Double(hex & 0xFF) / 255)
     }
 }

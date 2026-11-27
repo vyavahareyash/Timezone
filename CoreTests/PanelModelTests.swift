@@ -202,14 +202,14 @@ struct ZoneStripTests {
     @Test func cellsAreBandedByTheirOwnZonesLocalHour() {
         let model = makeModel(now: "2026-09-21T14:13:20Z", zones: [("Pune", "Asia/Kolkata")])
 
-        // Home (Berlin): night 0–8, working 9–17, evening 18–21, night 22–23.
-        let home: [HourCell.Band] = Array(repeating: .night, count: 9) + Array(repeating: .working, count: 9)
-            + Array(repeating: .evening, count: 4) + Array(repeating: .night, count: 2)
+        // Home (Berlin): night 0–6, evening 7–8, working 9–17, evening 18–21, night 22–23.
+        let home: [HourCell.Band] = Array(repeating: .night, count: 7) + Array(repeating: .evening, count: 2)
+            + Array(repeating: .working, count: 9) + Array(repeating: .evening, count: 4) + Array(repeating: .night, count: 2)
         #expect(model.rows[0].cells.map(\.band) == home)
 
         // Pune is half an hour ahead: its whole hours run 4–23 then 0–2; both half-hour stubs fall in hour 3.
-        let pune: [HourCell.Band] = Array(repeating: .night, count: 5) + Array(repeating: .working, count: 9)
-            + Array(repeating: .evening, count: 4) + Array(repeating: .night, count: 5)
+        let pune: [HourCell.Band] = Array(repeating: .night, count: 3) + Array(repeating: .evening, count: 2)
+            + Array(repeating: .working, count: 9) + Array(repeating: .evening, count: 4) + Array(repeating: .night, count: 5)
         #expect(model.rows[1].cells.filter(\.isWhole).map(\.band) == pune)
         #expect(model.rows[1].cells.filter { !$0.isWhole }.map(\.band) == [.night, .night])
     }

@@ -32,11 +32,11 @@ public struct HourCell {
     /// The part of the day this cell's local hour falls in; the strip shades by it.
     public enum Band { case working, evening, night }
 
-    /// Working 09:00–18:00, evening 18:00–22:00, night the rest, by the Zone's own local hour.
+    /// Working 09:00–18:00, evening 07:00–09:00 and 18:00–22:00, night the rest, by the Zone's own local hour.
     public var band: Band {
         switch hour {
         case 9..<18: .working
-        case 18..<22: .evening
+        case 7..<9, 18..<22: .evening
         default: .night
         }
     }
