@@ -10,5 +10,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: brew install xcodegen
-      - run: xcodebuild -version && xcrun --sdk macosx --show-sdk-version && xcode-select -p && ls /Applications | grep -i xcode
-      - run: VERBOSE=1 scripts/dev test-one TimezoneCoreTests
+      - run: scripts/dev test-one TimezoneCoreTests
