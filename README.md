@@ -65,4 +65,8 @@ Build from source with Xcode and `brew install xcodegen`, then run `scripts/dev 
 
 City search uses data from [GeoNames](https://www.geonames.org/) (CC BY 4.0). Timezone is released under the [MIT License](LICENSE).
 
+If Timezone saves you a round of "what time is that for you?", you can buy me a coffee.
+
+<a href="https://buymeacoffee.com/vyavahareyash"><img src=".github/bmc-button.png" height="46" alt="Buy Me A Coffee"></a>
+
 <sub>In 1883 the railways gave the world standard time, and towns lived through noon twice. Timezone keeps it in your menu bar.</sub>
