@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Timezone panel, combined</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A66D9}a:hover{color:#084FA8}
+.cell:hover{filter:brightness(1.06)}
+.btn:hover{filter:brightness(0.96)}
+button:focus-visible,input:focus-visible{outline:2px solid #4DA3FF;outline-offset:1px}
+</style>
+</helmet>
+<div style="width: 760px; height: 860px; box-sizing: border-box; background: {{t.bg}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; color: {{t.text}}; display: flex; flex-direction: column">
+
+  <div style="height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 16px; background: {{t.bar}}; color: {{t.barText}}; font-size: 13px">
+    <span style="display: flex; align-items: center; justify-content: center; width: 30px; height: 22px; border-radius: 5px; background: {{t.pressed}}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.8 3 2.8 15 0 18"></path><path d="M12 3c-2.8 3-2.8 15 0 18"></path></svg>
+    </span>
+    <span style="font-variant-numeric: tabular-nums">Thu 26 Nov  {{menuClock}}</span>
+  </div>
+
+  <div style="position: relative; width: 612px; box-sizing: border-box; margin: 6px 28px 0 auto; padding: 14px 16px 14px; border-radius: 12px; background: {{t.panel}}; border: 1px solid {{t.border}}; box-shadow: 0 18px 50px rgba(0,0,0,0.28), 0 2px 6px rgba(0,0,0,0.12)">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
+      <div style="display: flex; flex-direction: column; gap: 1px">
+        <span style="font-size: 13px; font-weight: 600">Today</span>
+        <span style="font-size: 11px; color: {{t.sub}}">Thursday 26 November · Berlin</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <sc-if value="{{following}}" hint-placeholder-val="{{ true }}">
+          <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: {{t.sub}}"><span style="width: 7px; height: 7px; border-radius: 50%; background: {{t.now}}"></span>Following Now</span>
+        </sc-if>
+        <sc-if value="{{notFollowing}}" hint-placeholder-val="{{ false }}">
+          <button type="button" class="btn" onClick="{{backToNow}}" style="border: 0; border-radius: 6px; padding: 5px 10px; font: 600 12px -apple-system, system-ui, sans-serif; background: {{t.accent}}; color: {{t.accentFg}}; cursor: pointer">Back to Now</button>
+        </sc-if>
+        <button type="button" class="btn" aria-label="More" onClick="{{toggleMenu}}" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 24px; border: 0; border-radius: 6px; background: {{t.chip}}; color: {{t.text}}; cursor: pointer">
+          <svg width="16" height="4" viewBox="0 0 16 4" fill="currentColor" aria-hidden="true"><circle cx="2" cy="2" r="1.6"></circle><circle cx="8" cy="2" r="1.6"></circle><circle cx="14" cy="2" r="1.6"></circle></svg>
+        </button>
+      </div>
+    </div>
+
+    <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; top: 46px; right: 16px; z-index: 5; width: 230px; box-sizing: border-box; padding: 5px; border-radius: 8px; background: {{t.field}}; border: 1px solid {{t.border}}; box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; flex-direction: column; font-size: 13px">
+        <button type="button" class="btn" onClick="{{toggleLogin}}" style="display: flex; align-items: center; gap: 8px; border: 0; background: transparent; color: {{t.text}}; padding: 5px 8px; border-radius: 5px; font: 13px -apple-system, system-ui, sans-serif; text-align: left; cursor: pointer"><span style="width: 14px">{{loginMark}}</span>Launch at login</button>
+        <div style="height: 1px; margin: 4px 6px; background: {{t.divider}}"></div>
+        <span style="padding: 5px 8px 5px 30px; font-size: 12px; color: {{t.sub}}">City data © GeoNames (CC BY 4.0)</span>
+        <div style="height: 1px; margin: 4px 6px; background: {{t.divider}}"></div>
+        <button type="button" class="btn" onClick="{{toggleMenu}}" style="border: 0; background: transparent; color: {{t.text}}; padding: 5px 8px 5px 30px; border-radius: 5px; font: 13px -apple-system, system-ui, sans-serif; text-align: left; cursor: pointer">Quit Timezone</button>
+      </div>
+    </sc-if>
+
+    <div style="position: relative; display: flex; flex-direction: column; gap: 2px">
+      <div style="position: relative; height: 16px; margin-left: 172px; width: 408px">
+        <span style="position: absolute; top: 0; left: {{nowLabelX}}px; font-size: 10px; font-weight: 600; color: {{t.now}}">Now</span>
+      </div>
+
+      <sc-for list="{{rows}}" as="row" hint-placeholder-count="5">
+        <div style="display: flex; align-items: center; gap: 12px; height: 52px; margin: 0 -8px; padding: 0 8px; border-radius: 8px; background: {{row.bg}}">
+          <div style="width: 160px; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: {{t.sub}}">
+              <sc-if value="{{row.home}}" hint-placeholder-val="{{ false }}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg>
+              </sc-if>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{row.label}}</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 6px">
+              <span style="font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.2px">{{row.time}}</span>
+              <sc-if value="{{row.hasDay}}" hint-placeholder-val="{{ false }}">
+                <span style="font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: {{t.badgeBg}}; color: {{t.badgeFg}}">{{row.day}}</span>
+              </sc-if>
+              <span style="font-size: 11px; color: {{t.sub}}">{{row.abbr}}</span>
+            </div>
+          </div>
+          <div aria-hidden="true" style="position: relative; width: 408px; height: 26px">
+            <sc-for list="{{row.cells}}" as="cell" hint-placeholder-count="24">
+              <div style="position: absolute; top: 0; left: {{cell.left}}px; width: {{cell.w}}px; height: 26px; border-radius: 3px; background: {{cell.bg}}; color: {{cell.fg}}; box-shadow: {{cell.ring}}; font: {{cell.weight}} 10px/26px -apple-system, system-ui, sans-serif; font-variant-numeric: tabular-nums; text-align: center">{{cell.num}}</div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+
+      <div aria-hidden="true" style="position: absolute; top: 14px; bottom: 0; left: {{nowLineX}}px; width: 1px; background: {{t.now}}; pointer-events: none"></div>
+      <div aria-hidden="true" style="position: absolute; top: 10px; bottom: 0; left: {{cursorLineX}}px; width: 2px; background: {{t.accent}}; pointer-events: none"></div>
+      <div onPointerDown="{{onDown}}" onPointerMove="{{onMove}}" onPointerUp="{{onUp}}" onPointerCancel="{{onUp}}" style="position: absolute; top: 0; bottom: 0; left: 172px; width: 408px; cursor: col-resize; touch-action: none; user-select: none">
+        <button type="button" aria-label="{{handleLabel}}" onKeyDown="{{onKey}}" style="position: absolute; top: 1px; left: {{handleX}}px; width: 14px; height: 14px; padding: 0; border-radius: 50%; border: 2px solid {{knobRing}}; background: {{t.accent}}; box-shadow: 0 1px 3px rgba(0,0,0,0.3); cursor: grab"></button>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid {{t.divider}}">
+      <button type="button" class="btn" onClick="{{toggleSearch}}" style="display: flex; align-items: center; gap: 6px; border: 0; border-radius: 6px; padding: 5px 10px; background: {{t.chip}}; color: {{t.text}}; font: 500 12px -apple-system, system-ui, sans-serif; cursor: pointer">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 1v10M1 6h10"></path></svg>Add Zone
+      </button>
+      <span style="font-size: 11px; color: {{t.sub}}">Drag the blue line, or press anywhere and scrub</span>
+    </div>
+
+    <sc-if value="{{searching}}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top: 10px; padding: 10px; border-radius: 8px; background: {{t.field}}; border: 1px solid {{t.border}}; display: flex; flex-direction: column; gap: 6px">
+        <label for="city-search-b" style="font-size: 11px; font-weight: 600; color: {{t.sub}}">Add a Zone</label>
+        <input id="city-search-b" type="text" placeholder="Search a city, e.g. Pune or San Francisco" value="{{query}}" onChange="{{onQuery}}" style="box-sizing: border-box; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid {{t.border}}; background: {{t.panel}}; color: {{t.text}}; font: 13px -apple-system, system-ui, sans-serif">
+        <sc-for list="{{results}}" as="r" hint-placeholder-count="3">
+          <button type="button" class="btn" onClick="{{r.add}}" style="display: flex; justify-content: space-between; align-items: center; border: 0; border-radius: 5px; padding: 6px 8px; background: transparent; color: {{t.text}}; font: 13px -apple-system, system-ui, sans-serif; text-align: left; cursor: pointer">
+            <span>{{r.name}} <span style="color: {{t.sub}}">{{r.country}}</span></span>
+            <span style="font-size: 12px; color: {{t.sub}}; font-variant-numeric: tabular-nums">{{r.time}} {{r.abbr}}</span>
+          </button>
+        </sc-for>
+        <sc-if value="{{noResults}}" hint-placeholder-val="{{ false }}">
+          <span style="padding: 4px 8px; font-size: 12px; color: {{t.sub}}">No city starts with that.</span>
+        </sc-if>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"clock24":{"editor":"boolean","default":true},"numbers":{"editor":"enum","options":["all","two","three"],"default":"three"},"$preview":{"width":760,"height":860}}'>
+class Component extends DCLogic {
+  state = {
+    cursor: 853,
+    following: true,
+    searching: false,
+    menuOpen: false,
+    login: true,
+    query: '',
+    zones: [
+      { label: 'Berlin', home: true, off: 0, abbr: 'CET' },
+      { label: 'Pune', off: 270, abbr: 'IST' },
+      { label: 'Client (NYC)', off: -360, abbr: 'EST' },
+      { label: 'San Francisco', off: -540, abbr: 'PST' },
+      { label: 'Tokyo', off: 480, abbr: 'JST' }
+    ]
+  };
+
+  moveTo(min) {
+    const snapped = Math.max(0, Math.min(1440, Math.round(min / 15) * 15));
+    this.setState({ cursor: snapped, following: false });
+  }
+
+  renderVals() {
+    const NOW = 853; // 14:13 in Berlin
+    const STRIP = 408;
+    const INFO = 172;
+    const dark = this.props.dark ?? false;
+    const h24 = this.props.clock24 ?? true;
+    const s = this.state;
+    const t = dark ? {
+      bg: '#0E0F12', bar: '#26272C', barText: '#ECECEE', pressed: 'rgba(255,255,255,0.16)',
+      panel: '#232428', border: 'rgba(255,255,255,0.12)', divider: 'rgba(255,255,255,0.08)',
+      text: '#ECECEE', sub: '#A3A3AA', chip: 'rgba(255,255,255,0.10)', field: '#1A1B1E', homeTint: 'rgba(255,255,255,0.05)',
+      work: '#D3AE55', workFg: '#241B04', eve: '#4E5566', eveFg: '#E2E5EC', night: '#33384A', nightFg: '#B4BAC8',
+      accent: '#4DA3FF', accentFg: '#06182E', now: '#FF5A50', badgeBg: '#4A3216', badgeFg: '#FFC98A'
+    } : {
+      bg: '#D9DEE6', bar: '#EEF0F4', barText: '#1D1D1F', pressed: 'rgba(0,0,0,0.12)',
+      panel: '#F6F6F8', border: 'rgba(0,0,0,0.14)', divider: 'rgba(0,0,0,0.08)',
+      text: '#1D1D1F', sub: '#5E5E64', chip: 'rgba(0,0,0,0.06)', field: '#FFFFFF', homeTint: 'rgba(10,102,217,0.07)',
+      work: '#F8DB96', workFg: '#4A3A10', eve: '#D3D8E1', eveFg: '#2B3140', night: '#A9B0BF', nightFg: '#1F2430',
+      accent: '#0A66D9', accentFg: '#FFFFFF', now: '#D7261E', badgeBg: '#FFE4C2', badgeFg: '#8A3B00'
+    };
+    const every = { all: 1, two: 2, three: 3 }[this.props.numbers ?? 'three'] || 3;
+    const c = s.following ? NOW : s.cursor;
+    const x = (m) => (m / 1440) * STRIP;
+    const mod = (m) => ((m % 1440) + 1440) % 1440;
+    const fmt = (min) => {
+      const h = Math.floor(min / 60);
+      const mm = String(min % 60).padStart(2, '0');
+      if (h24) return String(h).padStart(2, '0') + ':' + mm;
+      return ((h % 12) || 12) + ':' + mm + (h < 12 ? ' AM' : ' PM');
+    };
+
+    const rows = s.zones.map((z) => {
+      const o = z.off;
+      const first = (60 - mod(o) % 60) % 60;
+      const bounds = [0];
+      for (let m = first === 0 ? 60 : first; m < 1440; m += 60) bounds.push(m);
+      bounds.push(1440);
+      const cells = [];
+      for (let k = 0; k < bounds.length - 1; k++) {
+        const a = bounds[k];
+        const b = bounds[k + 1];
+        const local = mod(a + o);
+        const hr = Math.floor(local / 60);
+        const band = hr >= 9 && hr < 18 ? 'work' : ((hr >= 7 && hr < 9) || (hr >= 18 && hr < 22)) ? 'eve' : 'night';
+        const active = c >= a && (c < b || (c === 1440 && b === 1440));
+        cells.push({
+          left: (x(a) + 0.5).toFixed(2),
+          w: Math.max(x(b) - x(a) - 1, 1).toFixed(2),
+          bg: t[band],
+          fg: t[band + 'Fg'],
+          ring: active ? 'inset 0 0 0 2px ' + t.accent : 'none',
+          weight: active ? 800 : 500,
+          num: b - a === 60 && (active || hr % every === 0) ? (h24 ? String(hr) : String((hr % 12) || 12)) : ''
+        });
+      }
+      const localAtCursor = c + o;
+      const day = Math.floor(localAtCursor / 1440);
+      return {
+        label: z.label,
+        home: !!z.home,
+        bg: z.home ? t.homeTint : 'transparent',
+        abbr: z.abbr,
+        time: fmt(mod(localAtCursor)),
+        hasDay: day !== 0,
+        day: day > 0 ? '+' + day : '−' + Math.abs(day),
+        cells
+      };
+    });
+
+    const cities = [
+      { name: 'Pune', country: 'India', off: 270, abbr: 'IST' },
+      { name: 'Puebla', country: 'Mexico', off: -420, abbr: 'CST' },
+      { name: 'Pula', country: 'Croatia', off: 0, abbr: 'CET' },
+      { name: 'Paris', country: 'France', off: 0, abbr: 'CET' },
+      { name: 'Perth', country: 'Australia', off: 420, abbr: 'AWST' },
+      { name: 'Porto', country: 'Portugal', off: -60, abbr: 'WET' },
+      { name: 'Prague', country: 'Czechia', off: 0, abbr: 'CET' },
+      { name: 'San Francisco', country: 'United States', off: -540, abbr: 'PST' },
+      { name: 'São Paulo', country: 'Brazil', off: -240, abbr: 'BRT' },
+      { name: 'Sydney', country: 'Australia', off: 600, abbr: 'AEDT' },
+      { name: 'Singapore', country: 'Singapore', off: 420, abbr: 'SGT' },
+      { name: 'London', country: 'United Kingdom', off: -60, abbr: 'GMT' },
+      { name: 'New York', country: 'United States', off: -360, abbr: 'EST' },
+      { name: 'Kathmandu', country: 'Nepal', off: 285, abbr: 'NPT' },
+      { name: 'Tokyo', country: 'Japan', off: 480, abbr: 'JST' }
+    ];
+    const fold = (v) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const q = fold(s.query.trim());
+    const results = q === '' ? [] : cities.filter((ct) => fold(ct.name).startsWith(q)).slice(0, 5).map((ct) => ({
+      name: ct.name,
+      country: ct.country,
+      abbr: ct.abbr,
+      time: fmt(mod(NOW + ct.off)),
+      add: () => this.setState({
+        zones: s.zones.concat([{ label: ct.name, off: ct.off, abbr: ct.abbr }]),
+        searching: false,
+        query: ''
+      })
+    }));
+
+    return {
+      t,
+      rows,
+      results,
+      query: s.query,
+      noResults: q !== '' && results.length === 0,
+      cursor: c,
+      following: s.following,
+      notFollowing: !s.following,
+      searching: s.searching,
+      menuOpen: s.menuOpen,
+      loginMark: s.login ? '✓' : '',
+      menuClock: fmt(NOW),
+      knobRing: s.following ? t.now : t.panel,
+      nowLabelX: (x(NOW) - 10).toFixed(2),
+      nowLineX: (INFO + x(NOW)).toFixed(2),
+      cursorLineX: (INFO + x(c) - 1).toFixed(2),
+      handleX: (x(c) - 7).toFixed(2),
+      handleLabel: 'Cursor at ' + fmt(mod(c)) + ' Berlin. Left and right arrows move it 15 minutes.',
+      onDown: (e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        this.dragging = true;
+        const r = e.currentTarget.getBoundingClientRect();
+        this.moveTo(((e.clientX - r.left) / r.width) * 1440);
+      },
+      onMove: (e) => {
+        if (!this.dragging) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        this.moveTo(((e.clientX - r.left) / r.width) * 1440);
+      },
+      onUp: () => { this.dragging = false; },
+      onKey: (e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        this.moveTo(c + (e.key === 'ArrowRight' ? 15 : -15));
+      },
+      backToNow: () => this.setState({ following: true }),
+      toggleMenu: () => this.setState({ menuOpen: !s.menuOpen }),
+      toggleLogin: () => this.setState({ login: !s.login }),
+      toggleSearch: () => this.setState({ searching: !s.searching, query: '' }),
+      onQuery: (e) => this.setState({ query: e.target.value })
+    };
+  }
+}
+</script>
+</body>
+</html>
