@@ -56,7 +56,7 @@ struct PanelSnapshotTests {
 
     @Test func inlineRenameShowsTheZoneLabelInAField() throws {
         try assertSnapshot("zones-rename-field", zone: "Europe/Berlin", locale: "en_GB",
-                           addingCities: ["Pune", "San Francisco"], renaming: 0)
+                           addingCities: ["Pune", "San Francisco"], renaming: .zone(0))
     }
 
     @Test func homeAndEightZonesFitWithoutScrolling() throws {
@@ -71,20 +71,30 @@ struct PanelSnapshotTests {
                            addingCities: ["Pune", "Kathmandu", "San Francisco"], dragging: 0, dragOffset: 50)
     }
 
-    @Test func zonesAreShadedByWorkingEveningAndNightHours() throws {
-        try assertSnapshot("zones-banded", zone: "Europe/Berlin", locale: "en_GB",
+    @Test func zonesAreColouredLikeTheSkyAtTheirLocalHour() throws {
+        try assertSnapshot("zones-sky", zone: "Europe/Berlin", locale: "en_GB",
                            addingCities: ["Pune", "San Francisco", "Auckland"])
     }
 
-    @Test func zoneShadingStaysVisibleInDarkMode() throws {
-        try assertSnapshot("zones-banded-dark", zone: "Europe/Berlin", locale: "en_GB", colorScheme: .dark,
+    @Test func zoneSkyStaysVisibleInDarkMode() throws {
+        try assertSnapshot("zones-sky-dark", zone: "Europe/Berlin", locale: "en_GB", colorScheme: .dark,
                            addingCities: ["Pune", "San Francisco", "Auckland"])
+    }
+
+    @Test func renamedHomeShowsItsNewLabel() throws {
+        try assertSnapshot("home-renamed", zone: "Europe/Berlin", locale: "en_GB", addingCities: ["Pune"],
+                           edit: { $0.renameHome(to: "Home") })
+    }
+
+    @Test func clickedClockShowsAFieldToTypeATime() throws {
+        try assertSnapshot("zones-time-field", zone: "Europe/Berlin", locale: "en_GB", addingCities: ["Pune"],
+                           editingTime: 1)
     }
 
     private func assertSnapshot(
         _ name: String, zone: String, locale: String, colorScheme: ColorScheme = .light, at instant: Date = now,
         movedCursorTo cursor: Date? = nil, searching query: String? = nil, addingCities: [String] = [],
-        renaming: Int? = nil, dragging: Int? = nil, dragOffset: CGFloat = 0,
+        renaming: RenameTarget? = nil, editingTime: Int? = nil, dragging: Int? = nil, dragOffset: CGFloat = 0,
         edit: (PanelModel) -> Void = { _ in }, filePath: String = #filePath
     ) throws {
         let cities = CityIndex.bundled()
@@ -94,7 +104,7 @@ struct PanelSnapshotTests {
         edit(model)
         if let cursor { model.moveCursor(to: cursor) }
         let view = PanelView(model: model, opensAtNow: cursor == nil, query: query, renaming: renaming,
-                             dragging: dragging, dragOffset: dragOffset)
+                             editingTime: editingTime, dragging: dragging, dragOffset: dragOffset)
             .background(.background)
             .environment(\.locale, Locale(identifier: locale))
             .environment(\.colorScheme, colorScheme)

@@ -36,7 +36,7 @@ final class PanelSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["TZ"] = "Asia/Kolkata" // pins the system time zone for this launch
         // A String here overrides the saved "zones" Data, so the app reads no saved Zones and starts clean.
-        app.launchArguments = ["-zones", "none"]
+        app.launchArguments = ["-zones", "none", "-homeLabels", "none"]
         app.launch()
 
         let statusItem = app.statusItems.firstMatch
@@ -50,8 +50,7 @@ final class PanelSmokeTests: XCTestCase {
         let atNow = homeTime.value as? String
 
         // Move the Cursor, close and reopen: the panel must reset to Now (onAppear/.task rerun).
-        let handle = panel.otherElements["Cursor handle"]
-        handle.click()
+        stripPoint(panel).click()
         XCTAssertTrue(panel.buttons["Back to Now"].waitForExistence(timeout: 5))
         let moved = homeTime.value as? String
         XCTAssertNotEqual(moved, atNow)
@@ -91,7 +90,7 @@ final class PanelSmokeTests: XCTestCase {
     private func launchAndOpenPanel() throws -> (app: XCUIApplication, panel: XCUIElement) {
         let app = XCUIApplication()
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
-        app.launchArguments = ["-zones", "none"]
+        app.launchArguments = ["-zones", "none", "-homeLabels", "none"]
         app.launch()
         let statusItem = app.statusItems.firstMatch
         XCTAssertTrue(statusItem.waitForExistence(timeout: 5))
@@ -102,18 +101,47 @@ final class PanelSmokeTests: XCTestCase {
         return (app, panel)
     }
 
-    /// A point on the Home strip, `dx` points right of its Cursor handle's centre. The handle's frame spans the
-    /// strip's whole height, so the centre line is inside the cells.
-    private func stripPoint(_ panel: XCUIElement, dx: CGFloat) -> XCUICoordinate {
-        panel.otherElements["Cursor handle"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            .withOffset(CGVector(dx: dx, dy: 0))
+    /// A point on the Home strip 80 points from the Cursor handle, toward the panel's middle so it stays on the strip.
+    /// A click on the handle itself would snap the Cursor to its own quarter hour and might not change the time.
+    private func stripPoint(_ panel: XCUIElement) -> XCUICoordinate {
+        let handle = panel.otherElements["Cursor handle"]
+        let dx: CGFloat = handle.frame.midX < panel.frame.midX ? 80 : -80
+        return handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).withOffset(CGVector(dx: dx, dy: 0))
     }
 
     /// A click on a strip moves the Cursor there, so the strip takes the press.
     func testClickingAStripMovesTheCursor() throws {
         let (app, panel) = try launchAndOpenPanel()
-        stripPoint(panel, dx: 80).click()
+        stripPoint(panel).click()
         XCTAssertTrue(panel.buttons["Back to Now"].waitForExistence(timeout: 5))
+        app.terminate()
+    }
+
+    /// Hovering a strip shows the left-right pointer, since dragging there moves the Cursor sideways.
+    func testHoveringAStripShowsTheLeftRightPointer() throws {
+        let (app, panel) = try launchAndOpenPanel()
+        stripPoint(panel).hover()
+        // The system pointer belongs to whichever app set it; the arrow's hot spot is its tip, the resize pointer's its middle.
+        let deadline = Date() + 2
+        while NSCursor.currentSystem?.hotSpot == NSCursor.arrow.hotSpot && Date() < deadline { RunLoop.current.run(until: Date() + 0.1) }
+        XCTAssertNotEqual(NSCursor.currentSystem?.hotSpot, NSCursor.arrow.hotSpot, "The pointer over a strip is still the arrow")
+        app.terminate()
+    }
+
+    /// Typing into a clock moves the Cursor to that time; Home can be renamed from its right-click menu.
+    func testTypingAClockTimeMovesTheCursorAndHomeCanBeRenamed() throws {
+        let (app, panel) = try launchAndOpenPanel()
+        let homeTime = panel.staticTexts.matching(NSPredicate(format: "value MATCHES %@", "\\d{1,2}:\\d{2}.*")).firstMatch
+        homeTime.click()
+        let field = panel.textFields["Time"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.typeText("9:30\n")
+        XCTAssertTrue(panel.buttons["Back to Now"].waitForExistence(timeout: 5))
+        XCTAssertTrue((homeTime.value as? String)?.contains("9:30") == true, "Home shows \(homeTime.value ?? "nothing")")
+
+        panel.staticTexts["Kolkata"].rightClick()
+        app.menuItems["Rename"].click()
+        XCTAssertTrue(panel.textFields["Label"].waitForExistence(timeout: 5))
         app.terminate()
     }
 
