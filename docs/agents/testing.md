@@ -1,6 +1,6 @@
 # Testing
 
-Three test targets, all run by the `Timezone` scheme via `scripts/dev` (modes in `AGENTS.md`).
+Three test targets, all run by the `Timezone` scheme via `scripts/dev` (modes in `AGENTS.md`). Run one suite or test with `scripts/dev test-one TimezoneCoreTests/ZoneEditingTests`, or `TimezoneTests/PanelSnapshotTests/<test>` for a snapshot.
 
 ## `CoreTests/`: behaviour
 
@@ -12,10 +12,11 @@ Render `PanelView` with a fixed clock, time zone, locale and color scheme to `Ap
 
 - A new or changed image is written in place and the test fails. Show the human the image diff: committing accepts it, `git checkout` rejects it. The pre-push hook blocks pushes while a snapshot is red.
 - Every change to what the panel shows needs a snapshot of the new state (`CODING_STANDARDS.md`).
-- `ImageRenderer` can't draw AppKit-backed controls: the ⋯ menu renders as a yellow 🚫 placeholder. Expected.
+- `ImageRenderer` can't draw AppKit-backed controls: the ⋯ menu, a `TextField`, and `draggable`/`dropDestination` render as a yellow 🚫 placeholder that hides what is under them. Expected. Where a snapshot must show a row, use a SwiftUI gesture for drag instead.
+- `ImageRenderer` draws nothing inside a `ScrollView`: the content renders blank. Keep the scrolling branch out of snapshots and verify it by reading the code.
 - `ImageRenderer` does run `onAppear`, which calls `model.open()` and resets the Cursor to Now. Snapshot a moved Cursor with `PanelView(model:opensAtNow: false)`.
 - To see a test's output, `print("DEBUG: ...")`; `scripts/dev` keeps those lines. `VERBOSE=1` dumps multi-KB compiler command lines.
-- A red `scripts/dev test` rewrites snapshots in place, so `git stash` or a branch switch around it leaves modified PNGs that block `git stash pop`. To compare against a clean tree, use a `git worktree`.
+- A red `scripts/dev test` rewrites snapshots in place, so `git stash` or a branch switch around it leaves modified PNGs that block `git stash pop`. To compare against a clean tree, use a `git worktree`. Experiments with a view change rewrite the committed PNGs as well: restore them with `git checkout -- AppTests/__Snapshots__/` before the next run.
 - The target is hosted in `Timezone.app` (it uses `@testable import Timezone`).
 
 ## `UITests/`: real-app smoke test

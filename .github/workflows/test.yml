@@ -1,0 +1,13 @@
+# Core tests only: snapshots are byte-for-byte PNGs that depend on the runner's macOS fonts and ICU data,
+# so they stay a local check (the pre-push hook runs them).
+name: Tests
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: scripts/dev test-one TimezoneCoreTests
