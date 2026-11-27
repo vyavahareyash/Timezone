@@ -9,7 +9,7 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 DD="$HOME/Library/Developer/Xcode/DerivedData/Timezone-cli"
-F='^DEBUG: |[0-9]: error:|^error:|✘|↳ (Recorded|Snapshot|Expectation)|✔ Test run|\*\* (TEST|BUILD)'
+F='^DEBUG: |[0-9]: error:|^error:|✘|↳ (Recorded|Snapshot|Expectation)|✔ Test run|Test Case .* (passed|failed)|\*\* (TEST|BUILD)'
 filter() { if [ -n "${VERBOSE:-}" ]; then cat; else grep -E "$F" || true; fi; }
 xcb() { xcodebuild "$@" -scheme Timezone -destination 'platform=macOS' -derivedDataPath "$DD" 2>&1 | filter; }
 

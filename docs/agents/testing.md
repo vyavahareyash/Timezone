@@ -27,9 +27,10 @@ The run launches with `-zones none`, so the app ignores your saved Zones and sta
 - The panel appears as a `Dialog` in the accessibility tree, not a window.
 - `XCUIElement.screenshot()` fails for a panel on a non-main display, so the test crops it from its whole screen.
 - Static texts expose `value`, not `label`. Don't compare the time against Now (the minute can tick between reads); compare it with the moved time.
-- `click()` on a focusable element in the panel works. `press(forDuration:thenDragTo:)` does not move the Cursor, and `typeKey` or a click at an offset from the element closes the panel.
+- `click()` on a focusable element in the panel works, and `typeText` on a clicked TextField works (the add-Zone search, #11). `press(forDuration:thenDragTo:)` does not move the Cursor, and `typeKey` or a click at an offset from the element closes the panel.
+- Clearing saved defaults from the test runner (`defaults delete` via `Process`) did not reliably change what the app reads. Override the value with a launch argument instead, as the add-Zone test does with `app.launchArguments = ["-zones", "none"]`.
 - `scripts/dev test-all` exports screenshots to `build/screenshots/` (the panel is `panel_*.png`; `manifest.json` maps names).
-- The run's summary doesn't list UI tests. To see each test's result, read the bundle: `xcrun xcresulttool get test-results tests --path build/Tests.xcresult | grep -E '"(name|result)"'`.
+- `scripts/dev test-all` prints a `Test Case … passed|failed` line per XCTest case, UI tests included, so the summary no longer hides them. For the full per-test tree, read the bundle: `xcrun xcresulttool get test-results tests --path build/Tests.xcresult | grep -E '"(name|result)"'`.
 
 ## Build location
 
