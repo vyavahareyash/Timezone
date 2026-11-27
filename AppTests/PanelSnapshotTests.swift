@@ -45,17 +45,38 @@ struct PanelSnapshotTests {
                            addingCities: ["Pune", "Kathmandu", "San Francisco", "Auckland"])
     }
 
+    @Test func renamedAndReorderedZonesShowTheirNewLabelsAndOrder() throws {
+        try assertSnapshot("zones-renamed", zone: "Europe/Berlin", locale: "en_GB",
+                           addingCities: ["Pune", "San Francisco", "Zürich"],
+                           edit: { model in
+                               model.moveZone(from: 2, to: 0)
+                               model.renameZone(at: 1, to: "Office")
+                           })
+    }
+
+    @Test func inlineRenameShowsTheZoneLabelInAField() throws {
+        try assertSnapshot("zones-rename-field", zone: "Europe/Berlin", locale: "en_GB",
+                           addingCities: ["Pune", "San Francisco"], renaming: 0)
+    }
+
+    @Test func homeAndEightZonesFitWithoutScrolling() throws {
+        try assertSnapshot("zones-eight", zone: "Europe/Berlin", locale: "en_GB",
+                           addingCities: ["Pune", "Kathmandu", "San Francisco", "Auckland", "Zürich",
+                                          "Mumbai", "Delhi", "Bengaluru"])
+    }
+
     private func assertSnapshot(
         _ name: String, zone: String, locale: String, colorScheme: ColorScheme = .light, at instant: Date = now,
         movedCursorTo cursor: Date? = nil, searching query: String? = nil, addingCities: [String] = [],
-        filePath: String = #filePath
+        renaming: Int? = nil, edit: (PanelModel) -> Void = { _ in }, filePath: String = #filePath
     ) throws {
         let cities = CityIndex.bundled()
         let model = PanelModel(clock: { instant }, systemTimeZone: { TimeZone(identifier: zone)! }, cities: cities,
                                locale: Locale(identifier: locale))
         for name in addingCities { model.addZone(try #require(cities.search(name).first)) }
+        edit(model)
         if let cursor { model.moveCursor(to: cursor) }
-        let view = PanelView(model: model, opensAtNow: cursor == nil, query: query)
+        let view = PanelView(model: model, opensAtNow: cursor == nil, query: query, renaming: renaming)
             .background(.background)
             .environment(\.locale, Locale(identifier: locale))
             .environment(\.colorScheme, colorScheme)

@@ -23,12 +23,100 @@ struct PanelView: View {
     @State private var isAdding: Bool
     @State private var query: String
 
-    /// Snapshots of the open search pass `query`.
-    init(model: PanelModel, opensAtNow: Bool = true, query: String? = nil) {
+    /// Snapshots of the open search pass `query`, and of an inline rename of the Zone at index `renaming`.
+    init(model: PanelModel, opensAtNow: Bool = true, query: String? = nil, renaming: Int? = nil) {
         self.model = model
         self.opensAtNow = opensAtNow
         _isAdding = State(initialValue: query != nil)
         _query = State(initialValue: query ?? "")
+        _renaming = State(initialValue: renaming)
+        _renameText = State(initialValue: renaming.map { model.zones[$0].label } ?? "")
+    }
+
+    /// The added Zone being renamed inline, by its index in `model.zones`.
+    @State private var renaming: Int?
+    @State private var renameText = ""
+    @FocusState private var renameFocused: Bool
+    private static let rowSpacing: CGFloat = 8
+    /// Home and eight Zones; the list scrolls beyond that, within `maxRowsHeight` (nine rows, measured in zones-eight).
+    private static let visibleRows = 9
+    private static let maxRowsHeight: CGFloat = 568
+
+    private func commitRename(_ index: Int) {
+        renaming = nil
+        model.renameZone(at: index, to: renameText)
+    }
+
+    /// The Zone being dragged, how far it has moved, and one row's height with its spacing (measured on layout).
+    @State private var dragged: Int?
+    @State private var dragDistance: CGFloat = 0
+    @State private var rowStep: CGFloat = 1
+
+    /// Drop the Zone where the drag ends, `rowStep` per row moved; the Home zone stays first.
+    private func reorder(_ index: Int) -> some Gesture {
+        DragGesture(minimumDistance: 4)
+            .onChanged { value in
+                dragged = index
+                dragDistance = value.translation.height
+            }
+            .onEnded { value in
+                let moved = Int((value.translation.height / rowStep).rounded())
+                model.moveZone(from: index, to: index + moved) // the model clamps to the list
+                dragged = nil
+                dragDistance = 0
+            }
+    }
+
+    @ViewBuilder
+    private func zoneRow(_ row: ZoneRow, zoneIndex: Int?) -> some View {
+        let content = VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                if let zoneIndex, renaming == zoneIndex {
+                    TextField("Label", text: $renameText)
+                        .focused($renameFocused)
+                        .onAppear { renameFocused = true }
+                        .onSubmit { commitRename(zoneIndex) }
+                        // Clicking away keeps the edit; only the field still open for this Zone commits.
+                        .onChange(of: renameFocused) { _, focused in
+                            if !focused && renaming == zoneIndex { commitRename(zoneIndex) }
+                        }
+                } else {
+                    Text(row.label)
+                }
+                Spacer()
+                if row.dayOffset != 0 {
+                    Text(row.dayOffset, format: .number.sign(strategy: .always()))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Text(row.abbreviation).font(.caption).foregroundStyle(.secondary)
+                // Text formats with the environment's time zone and locale (12/24-hour), not the style's own.
+                Text(row.time, format: Date.FormatStyle(date: .omitted, time: .shortened))
+                    .environment(\.timeZone, row.timeZone)
+                    .font(.title2.monospacedDigit())
+            }
+            HourStrip(model: model, row: row)
+        }
+        .padding(.horizontal, 6)
+        .background(row.isHome ? Color.accentColor.opacity(0.1) : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 6))
+
+        if let zoneIndex {
+            content
+                .contextMenu {
+                    Button("Rename") {
+                        if let renaming { commitRename(renaming) } // another Zone's open edit keeps its text
+                        renameText = row.label
+                        renaming = zoneIndex
+                    }
+                    Button("Remove") { renaming = nil; model.removeZone(at: zoneIndex) }
+                }
+                .offset(y: dragged == zoneIndex ? dragDistance : 0)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowStep = $0 + Self.rowSpacing }
+                // A drag on the row reorders it; the strip's own drag (a child gesture) still moves the Cursor.
+                .gesture(reorder(zoneIndex), including: renaming == zoneIndex ? .none : .all)
+        } else {
+            content // Home stays first and can't be renamed, removed or moved
+        }
     }
 
     var body: some View {
@@ -51,26 +139,16 @@ struct PanelView: View {
                 .fixedSize()
                 .accessibilityLabel("More")
             }
-            ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(row.label)
-                        Spacer()
-                        if row.dayOffset != 0 {
-                            Text(row.dayOffset, format: .number.sign(strategy: .always()))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Text(row.abbreviation).font(.caption).foregroundStyle(.secondary)
-                        // Text formats with the environment's time zone and locale (12/24-hour), not the style's own.
-                        Text(row.time, format: Date.FormatStyle(date: .omitted, time: .shortened))
-                            .environment(\.timeZone, row.timeZone)
-                            .font(.title2.monospacedDigit())
-                    }
-                    HourStrip(model: model, row: row)
+            let rowList = VStack(alignment: .leading, spacing: Self.rowSpacing) {
+                ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
+                    zoneRow(row, zoneIndex: row.zoneIndex)
                 }
-                .padding(.horizontal, 6)
-                .background(row.isHome ? Color.accentColor.opacity(0.1) : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 6))
+            }
+            // Scroll only past Home and eight Zones: ImageRenderer draws nothing inside a ScrollView.
+            if model.rows.count > Self.visibleRows {
+                ScrollView { rowList }.frame(maxHeight: Self.maxRowsHeight)
+            } else {
+                rowList
             }
             if model.zones.isEmpty && !isAdding {
                 Text("Add a zone with the + button").foregroundStyle(.secondary)

@@ -267,3 +267,119 @@ struct ZoneSearchTests {
         #expect(index.search("a").count == 8)
     }
 }
+
+struct ZoneEditingTests {
+    private static let fixture = CityIndex(tsv: """
+        Pune\tIN\tAsia/Kolkata
+        Mumbai\tIN\tAsia/Kolkata
+        San Francisco\tUS\tAmerica/Los_Angeles
+        Zürich\tCH\tEurope/Zurich
+        """)
+    private let now = Date(timeIntervalSince1970: 1_790_000_000)
+
+    /// The saved Zones survive a relaunch: each launch reads what the last one wrote.
+    private final class Store { var data: Data? }
+
+    private func launch(_ store: Store) -> PanelModel {
+        PanelModel(clock: { now }, systemTimeZone: { berlin }, cities: Self.fixture,
+                   loadZones: { store.data }, saveZones: { store.data = $0 })
+    }
+
+    @Test func renamingAZoneChangesItsLabelAndSurvivesRelaunch() {
+        let store = Store()
+        let model = launch(store)
+        model.addZone(model.search("pune")[0])
+
+        model.renameZone(at: 0, to: "Office")
+
+        #expect(model.rows.map(\.label) == ["Berlin", "Office"])
+        #expect(launch(store).rows.map(\.label) == ["Berlin", "Office"])
+    }
+
+    @Test func removingAZoneDeletesItAndSurvivesRelaunch() {
+        let store = Store()
+        let model = launch(store)
+        model.addZone(model.search("pune")[0])
+        model.addZone(model.search("san fr")[0])
+
+        model.removeZone(at: 0)
+
+        #expect(model.rows.map(\.label) == ["Berlin", "San Francisco"])
+        #expect(launch(store).rows.map(\.label) == ["Berlin", "San Francisco"])
+    }
+
+    @Test func draggingAZoneReordersItAndSurvivesRelaunch() {
+        let store = Store()
+        let model = launch(store)
+        model.addZone(model.search("pune")[0])
+        model.addZone(model.search("san fr")[0])
+        model.addZone(model.search("zür")[0])
+
+        model.moveZone(from: 2, to: 0)
+
+        #expect(model.rows.map(\.label) == ["Berlin", "Zürich", "Pune", "San Francisco"])
+        #expect(launch(store).rows.map(\.label) == ["Berlin", "Zürich", "Pune", "San Francisco"])
+    }
+
+    @Test func movesClampToTheListAndStaleIndexesAreIgnored() {
+        let model = launch(Store())
+        model.addZone(model.search("pune")[0])
+        model.addZone(model.search("san fr")[0])
+
+        model.moveZone(from: 0, to: 99)
+        #expect(model.rows.map(\.label) == ["Berlin", "San Francisco", "Pune"])
+        model.moveZone(from: 1, to: -5)
+        #expect(model.rows.map(\.label) == ["Berlin", "Pune", "San Francisco"])
+
+        model.renameZone(at: 5, to: "Nowhere")
+        model.removeZone(at: 5)
+        model.moveZone(from: 5, to: 0)
+        #expect(model.rows.map(\.label) == ["Berlin", "Pune", "San Francisco"])
+    }
+
+    @Test func twoZonesCanShareATimeZoneUnderDifferentLabels() {
+        let model = launch(Store())
+        model.addZone(model.search("pune")[0])
+        model.addZone(model.search("mumbai")[0])
+
+        #expect(model.rows.map(\.label) == ["Berlin", "Pune", "Mumbai"])
+        #expect(model.rows[1].timeZone == model.rows[2].timeZone)
+    }
+
+    @Test func renamingIgnoresBlankLabelsAndLabelsThatWouldDuplicateAZone() {
+        let model = launch(Store())
+        model.addZone(model.search("pune")[0])
+        model.addZone(model.search("mumbai")[0])
+
+        model.renameZone(at: 1, to: "   ")
+        model.renameZone(at: 1, to: "Pune") // Mumbai's time zone under Pune's label: a duplicate
+        #expect(model.rows.map(\.label) == ["Berlin", "Pune", "Mumbai"])
+
+        model.renameZone(at: 1, to: "  Office  ")
+        #expect(model.rows.map(\.label) == ["Berlin", "Pune", "Office"])
+    }
+
+    @Test func homeStaysFirstWhateverTheZonesDo() {
+        let model = launch(Store())
+        model.addZone(model.search("pune")[0])
+        model.addZone(model.search("san fr")[0])
+
+        model.moveZone(from: 1, to: 0)
+        model.removeZone(at: 0)
+
+        #expect(model.rows.map(\.label) == ["Berlin", "Pune"])
+        #expect(model.rows.first?.isHome == true)
+    }
+
+    @Test func aSavedZoneWithAnUnknownTimeZoneIsHiddenButKeptThroughEdits() {
+        let store = Store()
+        store.data = try! JSONEncoder().encode([["label": "Nowhere", "timeZoneIdentifier": "Mars/Olympus"],
+                                                ["label": "Pune", "timeZoneIdentifier": "Asia/Kolkata"]])
+        let model = launch(store)
+
+        #expect(model.rows.map(\.label) == ["Berlin", "Pune"])
+        #expect(model.rows.map(\.zoneIndex) == [nil, 1]) // a row's index is its Zone's, even past a hidden one
+        model.addZone(model.search("san fr")[0]) // any edit saves every stored Zone
+        #expect(launch(store).zones.map(\.label) == ["Nowhere", "Pune", "San Francisco"])
+    }
+}

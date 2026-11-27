@@ -13,6 +13,8 @@ public struct ZoneRow {
     public let dayOffset: Int
     /// The Zone's abbreviation at the Cursor, e.g. CET or IST.
     public let abbreviation: String
+    /// The Zone's index in `PanelModel.zones`; nil for the Home zone.
+    public let zoneIndex: Int?
 }
 
 /// The part of a Zone's strip within one of its local hours.
@@ -111,20 +113,24 @@ public struct HourCell {
         let zone = homeZone
         // "America/Argentina/Buenos_Aires" -> "Buenos Aires"
         let label = zone.identifier.split(separator: "/").last.map(String.init) ?? zone.identifier
-        return row(label: label.replacingOccurrences(of: "_", with: " "), timeZone: zone, isHome: true)
+        return row(label: label.replacingOccurrences(of: "_", with: " "), timeZone: zone, isHome: true, zoneIndex: nil)
     }
 
-    /// The Home zone first, then the added Zones in the order they were added.
+    /// The Home zone first, then the added Zones in the order they were added. A saved Zone whose time zone
+    /// this system doesn't know is kept in `zones` but has no row.
     public var rows: [ZoneRow] {
-        [homeRow] + zones.compactMap { zone in
-            TimeZone(identifier: zone.timeZoneIdentifier).map { row(label: zone.label, timeZone: $0, isHome: false) }
+        [homeRow] + zones.indices.compactMap { index in
+            let zone = zones[index]
+            return TimeZone(identifier: zone.timeZoneIdentifier).map {
+                row(label: zone.label, timeZone: $0, isHome: false, zoneIndex: index)
+            }
         }
     }
 
-    private func row(label: String, timeZone: TimeZone, isHome: Bool) -> ZoneRow {
+    private func row(label: String, timeZone: TimeZone, isHome: Bool, zoneIndex: Int?) -> ZoneRow {
         ZoneRow(label: label, timeZone: timeZone, time: cursor, cells: cells(in: timeZone), isHome: isHome,
                 dayOffset: dayNumber(cursor, in: timeZone) - dayNumber(cursor, in: homeZone),
-                abbreviation: abbreviation(of: timeZone, at: cursor))
+                abbreviation: abbreviation(of: timeZone, at: cursor), zoneIndex: zoneIndex)
     }
 
     private func calendar(in zone: TimeZone) -> Calendar {
@@ -172,6 +178,34 @@ public struct HourCell {
         let zone = AddedZone(label: city.name, timeZoneIdentifier: city.timeZoneIdentifier)
         guard TimeZone(identifier: zone.timeZoneIdentifier) != nil, !zones.contains(zone) else { return }
         zones.append(zone)
+        save()
+    }
+
+    /// Relabel the added Zone at `index`; a blank label, or one that would duplicate another Zone, is ignored.
+    public func renameZone(at index: Int, to label: String) {
+        guard zones.indices.contains(index) else { return }
+        let label = label.trimmingCharacters(in: .whitespaces)
+        let renamed = AddedZone(label: label, timeZoneIdentifier: zones[index].timeZoneIdentifier)
+        guard !label.isEmpty, !zones.contains(renamed) else { return }
+        zones[index] = renamed
+        save()
+    }
+
+    /// Remove the added Zone at `index`; the Home zone is never removed.
+    public func removeZone(at index: Int) {
+        guard zones.indices.contains(index) else { return }
+        zones.remove(at: index)
+        save()
+    }
+
+    /// Move the added Zone at `from` to position `to`, clamped to the list; the Home zone stays first.
+    public func moveZone(from: Int, to: Int) {
+        guard zones.indices.contains(from) else { return }
+        zones.insert(zones.remove(at: from), at: min(max(to, 0), zones.count))
+        save()
+    }
+
+    private func save() {
         if let data = try? JSONEncoder().encode(zones) { saveZones(data) } // never overwrite saved Zones with nothing
     }
 }
