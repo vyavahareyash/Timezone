@@ -23,6 +23,9 @@ targets:
     settings:
       base:
         INFOPLIST_KEY_LSUIElement: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
   TimezoneCoreTests:
     type: bundle.unit-test
     platform: macOS

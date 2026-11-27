@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="24" viewBox="0 0 880 24" role="img" aria-label="12:00, day">
+  <defs><linearGradient id="g"><stop offset="0" stop-color="#F3C08B"/><stop offset=".25" stop-color="#A8D2F2"/><stop offset=".7" stop-color="#A8D2F2"/><stop offset="1" stop-color="#A8D2F2" stop-opacity="0"/></linearGradient></defs>
+  <text x="0" y="16" font-size="12" letter-spacing=".8" fill="#8C959F" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace">12:00 · DAY</text>
+  <rect x="120" y="10" width="760" height="4" rx="2" fill="url(#g)"/>
+</svg>

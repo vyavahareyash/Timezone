@@ -1,0 +1,36 @@
+# Push a tag like v1.0.0: builds the DMG, publishes it as a GitHub release and updates the Homebrew cask.
+# The README's download button links to releases/latest/download/Timezone.dmg, so the file name must stay the same.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ github.ref_name }}
+      # A token that can push to vyavahareyash/homebrew-tap; without it the cask update is skipped.
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen create-dmg
+      - run: scripts/dev test-one TimezoneCoreTests
+      - name: Build the DMG
+        run: VERSION="${VERSION#v}" scripts/dev dmg
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" build/Timezone.dmg --title "Timezone ${VERSION#v}" --generate-notes
+      - name: Update the Homebrew cask
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        run: |
+          sha=$(shasum -a 256 build/Timezone.dmg | cut -d' ' -f1)
+          git clone --depth 1 "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/vyavahareyash/homebrew-tap.git" tap
+          sed -e "s/@VERSION@/${VERSION#v}/" -e "s/@SHA256@/$sha/" -e '1d' scripts/release/timezone.rb > tap/Casks/timezone.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/timezone.rb
+          git diff --cached --quiet || { git commit -m "timezone ${VERSION#v}"; git push origin HEAD; }
